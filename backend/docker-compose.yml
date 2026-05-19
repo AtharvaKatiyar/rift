@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: rift-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      - rift-postgres-data:/var/lib/postgresql/data
+    
+    networks:
+      - rift-network
+
+  redis:
+    image: redis:7
+    container_name: rift-redis
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - rift-redis-data:/data
+    networks:
+      - rift-network
+
+volumes:
+  rift-postgres-data:
+  rift-redis-data:
+
+networks:
+  rift-network:

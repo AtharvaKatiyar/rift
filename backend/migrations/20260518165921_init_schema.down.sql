@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS link_history;
+DROP TABLE IF EXISTS central_links;
+DROP TABLE IF EXISTS users;

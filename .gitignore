@@ -1,0 +1,67 @@
+# ==========================
+# Environment variables
+# ==========================
+.env
+backend/.env
+*.env
+
+# ==========================
+# Go build files
+# ==========================
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Go binary output
+bin/
+dist/
+
+# ==========================
+# IDE / Editor files
+# ==========================
+.vscode/
+.idea/
+
+*.swp
+*.swo
+*~
+
+# ==========================
+# OS generated files
+# ==========================
+.DS_Store
+Thumbs.db
+
+# ==========================
+# Logs
+# ==========================
+*.log
+
+# ==========================
+# Temporary files
+# ==========================
+tmp/
+temp/
+
+# ==========================
+# Air (hot reload)
+# ==========================
+.air/
+backend/tmp/
+
+# ==========================
+# Docker
+# ==========================
+postgres-data/
+redis-data/
+
+# ==========================
+# Test coverage
+# ==========================
+coverage/
+*.coverprofile
