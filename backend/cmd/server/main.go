@@ -13,6 +13,8 @@ import (
 
 	authpkg "github.com/AtharvaKatiyar/rift/internal/auth"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
+	linkspkg "github.com/AtharvaKatiyar/rift/internal/links"
+	redirectpkg "github.com/AtharvaKatiyar/rift/internal/redirect"
 )
 
 func main() {
@@ -79,6 +81,69 @@ func main() {
 			authHandler.Me,
 		)
 	}
+
+	linksService := &linkspkg.Service{
+		Queries: queries,
+		BaseURL: cfg.BaseURL,
+		Redis: redisClient,
+	}
+
+	linksHandler := &linkspkg.Handler{
+		Service: linksService,
+	}
+
+	linksRoutes := api.Group(
+		"/links",
+		authpkg.AuthMiddleware(
+			cfg.JWTSecret,
+		),
+	)
+
+	{
+		linksRoutes.POST(
+			"",
+			linksHandler.CreateLink,
+		)
+
+		linksRoutes.GET(
+			"",
+			linksHandler.GetUserLinks,
+		)
+
+		linksRoutes.PUT(
+			"/:id",
+			linksHandler.UpdateLink,
+		)
+
+		linksRoutes.GET(
+			"/:id",
+			linksHandler.GetLink,
+		)
+
+		linksRoutes.DELETE(
+			"/:id",
+			linksHandler.DeleteLink,
+		)
+
+		linksRoutes.PATCH(
+			"/:id/status",
+			linksHandler.ToggleStatus,
+		)
+	}
+
+	redirectService := &redirectpkg.Service{
+		Queries: queries,
+		Redis: redisClient,
+	}
+
+	redirectHandler := &redirectpkg.Handler{
+		Service: redirectService,
+	}
+
+	router.GET(
+		"/u/:username/:slug/:key",
+		redirectHandler.Redirect,
+	)
 
 	if err := router.Run(":" + cfg.ServerPort); err != nil {
 		log.Fatal(err)

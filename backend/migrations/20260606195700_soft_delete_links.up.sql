@@ -1,0 +1,6 @@
+ALTER TABLE central_links
+ADD COLUMN is_deleted BOOLEAN
+DEFAULT FALSE;
+
+ALTER TABLE central_links
+ADD COLUMN deleted_at TIMESTAMP;

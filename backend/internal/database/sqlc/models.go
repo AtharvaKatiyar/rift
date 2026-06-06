@@ -19,6 +19,8 @@ type CentralLink struct {
 	IsActive   bool
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
+	IsDeleted  pgtype.Bool
+	DeletedAt  pgtype.Timestamp
 }
 
 type LinkHistory struct {

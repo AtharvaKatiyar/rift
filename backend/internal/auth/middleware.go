@@ -3,7 +3,6 @@ package auth
 import (
 	"net/http"
 	"strings"
-	"log"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,10 +16,6 @@ func AuthMiddleware(
 			"Authorization",
 		)
 
-		log.Println(
-			"Authorization Header:",
-			authHeader,
-		)
 
 		if authHeader == "" {
 
@@ -54,11 +49,6 @@ func AuthMiddleware(
 		tokenString := strings.TrimPrefix(
 			authHeader,
 			"Bearer ",
-		)
-
-		log.Println(
-			"Token String:",
-			tokenString,
 		)
 
 		claims, err := ValidateJWT(

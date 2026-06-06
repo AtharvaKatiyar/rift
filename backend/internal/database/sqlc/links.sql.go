@@ -15,6 +15,7 @@ const countUserLinks = `-- name: CountUserLinks :one
 SELECT COUNT(*)
 FROM central_links
 WHERE user_id = $1
+AND is_deleted = FALSE
 `
 
 func (q *Queries) CountUserLinks(ctx context.Context, userID pgtype.UUID) (int64, error) {
@@ -35,7 +36,7 @@ INSERT INTO central_links (
 VALUES (
     $1, $2, $3, $4, $5
 )
-RETURNING id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at
+RETURNING id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
 `
 
 type CreateLinkParams struct {
@@ -66,22 +67,55 @@ func (q *Queries) CreateLink(ctx context.Context, arg CreateLinkParams) (Central
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
-const deleteLink = `-- name: DeleteLink :exec
-DELETE FROM central_links
-WHERE id = $1
+const createLinkHistory = `-- name: CreateLinkHistory :exec
+INSERT INTO link_history (
+    link_id,
+    old_target_url,
+    new_target_url
+)
+VALUES (
+    $1, $2, $3
+)
 `
 
-func (q *Queries) DeleteLink(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteLink, id)
+type CreateLinkHistoryParams struct {
+	LinkID       pgtype.UUID
+	OldTargetUrl string
+	NewTargetUrl string
+}
+
+func (q *Queries) CreateLinkHistory(ctx context.Context, arg CreateLinkHistoryParams) error {
+	_, err := q.db.Exec(ctx, createLinkHistory, arg.LinkID, arg.OldTargetUrl, arg.NewTargetUrl)
+	return err
+}
+
+const deleteLink = `-- name: DeleteLink :exec
+UPDATE central_links
+SET
+	is_deleted = TRUE,
+	deleted_at = NOW()
+WHERE id = $1
+AND user_id = $2
+`
+
+type DeleteLinkParams struct {
+	ID     pgtype.UUID
+	UserID pgtype.UUID
+}
+
+func (q *Queries) DeleteLink(ctx context.Context, arg DeleteLinkParams) error {
+	_, err := q.db.Exec(ctx, deleteLink, arg.ID, arg.UserID)
 	return err
 }
 
 const getLinkByID = `-- name: GetLinkByID :one
-SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at
+SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
 FROM central_links
 WHERE id = $1
 `
@@ -100,12 +134,73 @@ func (q *Queries) GetLinkByID(ctx context.Context, id pgtype.UUID) (CentralLink,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getLinkByIDAndUserID = `-- name: GetLinkByIDAndUserID :one
+SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
+FROM central_links
+WHERE id = $1
+AND user_id = $2
+AND is_deleted = FALSE
+`
+
+type GetLinkByIDAndUserIDParams struct {
+	ID     pgtype.UUID
+	UserID pgtype.UUID
+}
+
+func (q *Queries) GetLinkByIDAndUserID(ctx context.Context, arg GetLinkByIDAndUserIDParams) (CentralLink, error) {
+	row := q.db.QueryRow(ctx, getLinkByIDAndUserID, arg.ID, arg.UserID)
+	var i CentralLink
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Slug,
+		&i.UniqueID,
+		&i.TargetUrl,
+		&i.ClickCount,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getLinkByPublicKey = `-- name: GetLinkByPublicKey :one
+SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
+FROM central_links
+WHERE unique_id = $1
+`
+
+func (q *Queries) GetLinkByPublicKey(ctx context.Context, uniqueID string) (CentralLink, error) {
+	row := q.db.QueryRow(ctx, getLinkByPublicKey, uniqueID)
+	var i CentralLink
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Slug,
+		&i.UniqueID,
+		&i.TargetUrl,
+		&i.ClickCount,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getLinkBySlug = `-- name: GetLinkBySlug :one
-SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at
+SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
 FROM central_links
 WHERE user_id = $1
 AND slug = $2
@@ -130,14 +225,66 @@ func (q *Queries) GetLinkBySlug(ctx context.Context, arg GetLinkBySlugParams) (C
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getLinkForRedirect = `-- name: GetLinkForRedirect :one
+SELECT
+    cl.id, cl.user_id, cl.title, cl.slug, cl.unique_id, cl.target_url, cl.click_count, cl.is_active, cl.created_at, cl.updated_at, cl.is_deleted, cl.deleted_at,
+    u.username
+FROM central_links cl
+JOIN users u
+ON cl.user_id = u.id
+WHERE cl.unique_id = $1
+AND cl.is_deleted = FALSE
+AND cl.is_active = TRUE
+`
+
+type GetLinkForRedirectRow struct {
+	ID         pgtype.UUID
+	UserID     pgtype.UUID
+	Title      string
+	Slug       string
+	UniqueID   string
+	TargetUrl  string
+	ClickCount int64
+	IsActive   bool
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	IsDeleted  pgtype.Bool
+	DeletedAt  pgtype.Timestamp
+	Username   string
+}
+
+func (q *Queries) GetLinkForRedirect(ctx context.Context, uniqueID string) (GetLinkForRedirectRow, error) {
+	row := q.db.QueryRow(ctx, getLinkForRedirect, uniqueID)
+	var i GetLinkForRedirectRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Slug,
+		&i.UniqueID,
+		&i.TargetUrl,
+		&i.ClickCount,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.Username,
 	)
 	return i, err
 }
 
 const getUserLinks = `-- name: GetUserLinks :many
-SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at
+SELECT id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
 FROM central_links
 WHERE user_id = $1
+AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -161,6 +308,8 @@ func (q *Queries) GetUserLinks(ctx context.Context, userID pgtype.UUID) ([]Centr
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IsDeleted,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -172,19 +321,68 @@ func (q *Queries) GetUserLinks(ctx context.Context, userID pgtype.UUID) ([]Centr
 	return items, nil
 }
 
+const incrementClickCount = `-- name: IncrementClickCount :exec
+UPDATE central_links
+SET click_count = click_count + 1
+WHERE id = $1
+`
+
+func (q *Queries) IncrementClickCount(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, incrementClickCount, id)
+	return err
+}
+
+const toggleLinkStatus = `-- name: ToggleLinkStatus :one
+UPDATE central_links
+SET
+    is_active = $3,
+    updated_at = NOW()
+WHERE id = $1
+AND user_id = $2
+RETURNING id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
+`
+
+type ToggleLinkStatusParams struct {
+	ID       pgtype.UUID
+	UserID   pgtype.UUID
+	IsActive bool
+}
+
+func (q *Queries) ToggleLinkStatus(ctx context.Context, arg ToggleLinkStatusParams) (CentralLink, error) {
+	row := q.db.QueryRow(ctx, toggleLinkStatus, arg.ID, arg.UserID, arg.IsActive)
+	var i CentralLink
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Slug,
+		&i.UniqueID,
+		&i.TargetUrl,
+		&i.ClickCount,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const updateLink = `-- name: UpdateLink :one
 UPDATE central_links
 SET
-    title = $2,
-    slug = $3,
-    target_url = $4,
+    title = $3,
+    slug = $4,
+    target_url = $5,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at
+AND user_id = $2
+RETURNING id, user_id, title, slug, unique_id, target_url, click_count, is_active, created_at, updated_at, is_deleted, deleted_at
 `
 
 type UpdateLinkParams struct {
 	ID        pgtype.UUID
+	UserID    pgtype.UUID
 	Title     string
 	Slug      string
 	TargetUrl string
@@ -193,6 +391,7 @@ type UpdateLinkParams struct {
 func (q *Queries) UpdateLink(ctx context.Context, arg UpdateLinkParams) (CentralLink, error) {
 	row := q.db.QueryRow(ctx, updateLink,
 		arg.ID,
+		arg.UserID,
 		arg.Title,
 		arg.Slug,
 		arg.TargetUrl,
@@ -209,6 +408,8 @@ func (q *Queries) UpdateLink(ctx context.Context, arg UpdateLinkParams) (Central
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsDeleted,
+		&i.DeletedAt,
 	)
 	return i, err
 }

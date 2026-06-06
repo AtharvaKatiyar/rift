@@ -19,6 +19,7 @@ type Config struct {
 	RedisPassword    string
 	JWTSecret        string
 	JWTExpiration    string
+	BaseURL			 string
 }
 
 func LoadConfig() *Config {
@@ -39,5 +40,6 @@ func LoadConfig() *Config {
 		RedisPassword:    os.Getenv("REDIS_PASSWORD"),
 		JWTSecret:        os.Getenv("JWT_SECRET"),
 		JWTExpiration:    os.Getenv("JWT_EXPIRATION"),
+		BaseURL:          os.Getenv("BASE_URL"),
 	}
 }
