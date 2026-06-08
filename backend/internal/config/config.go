@@ -20,6 +20,7 @@ type Config struct {
 	JWTSecret        string
 	JWTExpiration    string
 	BaseURL			 string
+	AppEnv			 string
 }
 
 func LoadConfig() *Config {
@@ -41,5 +42,6 @@ func LoadConfig() *Config {
 		JWTSecret:        os.Getenv("JWT_SECRET"),
 		JWTExpiration:    os.Getenv("JWT_EXPIRATION"),
 		BaseURL:          os.Getenv("BASE_URL"),
+		AppEnv:           os.Getenv("APP_ENV"),
 	}
 }

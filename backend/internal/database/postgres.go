@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
 	
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/AtharvaKatiyar/rift/internal/config"
@@ -28,6 +28,8 @@ func ConnectPostgres(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, er
 		pool.Close()
 		return nil, fmt.Errorf("failed to ping postgres: %w", err)
 	}
-	log.Println("successfully connected to postgres")
+	logger.Log.Info(
+		"postgres connected",
+	)
 	return pool, nil
 }

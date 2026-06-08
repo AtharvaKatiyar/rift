@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -13,25 +14,49 @@ func GetRedirect(
 	ctx context.Context,
 	rdb *redis.Client,
 	key string,
-) (string, error) {
+) (*RedirectCache, error) {
 
-	return rdb.Get(
+	val, err := rdb.Get(
 		ctx,
 		"redirect:"+key,
 	).Result()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var data RedirectCache
+
+	err = json.Unmarshal(
+		[]byte(val),
+		&data,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
 }
 
 func SetRedirect(
 	ctx context.Context,
 	rdb *redis.Client,
 	key string,
-	targetURL string,
+	data RedirectCache,
 ) error {
+
+	jsonData, err :=
+		json.Marshal(data)
+
+	if err != nil {
+		return err
+	}
 
 	return rdb.Set(
 		ctx,
 		"redirect:"+key,
-		targetURL,
+		jsonData,
 		RedirectTTL,
 	).Err()
 }

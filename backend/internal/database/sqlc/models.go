@@ -31,6 +31,18 @@ type LinkHistory struct {
 	ChangedAt    pgtype.Timestamptz
 }
 
+type RefreshToken struct {
+	ID              pgtype.UUID
+	UserID          pgtype.UUID
+	TokenHash       string
+	ExpiresAt       pgtype.Timestamptz
+	CreatedAt       pgtype.Timestamptz
+	RevokedAt       pgtype.Timestamptz
+	ReplacedByToken pgtype.Text
+	UserAgent       pgtype.Text
+	IpAddress       pgtype.Text
+}
+
 type User struct {
 	ID             pgtype.UUID
 	Email          string

@@ -1,16 +1,23 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
 	"context"
-	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 
+	"go.uber.org/zap"
 	"github.com/AtharvaKatiyar/rift/internal/cache"
 	"github.com/AtharvaKatiyar/rift/internal/config"
 	"github.com/AtharvaKatiyar/rift/internal/database"
-
+	"github.com/AtharvaKatiyar/rift/internal/middleware"
+	"github.com/AtharvaKatiyar/rift/internal/health"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
 	authpkg "github.com/AtharvaKatiyar/rift/internal/auth"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	linkspkg "github.com/AtharvaKatiyar/rift/internal/links"
@@ -18,42 +25,126 @@ import (
 )
 
 func main() {
+	
 	cfg := config.LoadConfig()
-
+	
 	ctx := context.Background()
+	
+	isProduction :=
+		cfg.AppEnv ==
+			"production"
+
+	err := logger.Init(
+		isProduction,
+	)
+
+	if err != nil {
+		logger.Log.Fatal(
+			"logger initialization failed",
+			zap.Error(err),
+		)
+	}
+
+	defer logger.Sync()
 
 	pgPool, err := database.ConnectPostgres(ctx, cfg)
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatal(
+			"postgres connection failed",
+			zap.Error(err),
+		)
 	}
-	defer pgPool.Close()
 
 	redisClient, err := cache.ConnectRedis(ctx, cfg)
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatal(
+			"redis connection failed",
+			zap.Error(err),
+		)
 	}
-	defer redisClient.Close()
 
 	queries := db.New(pgPool)
 
 	authService := &authpkg.Service{
 		Queries: queries,
+		DB:      pgPool,
 		Secret: cfg.JWTSecret,
 	}
 
-	authHandler := &authpkg.Handler{
-		Service: authService,
+	authHandler :=
+	&authpkg.Handler{
+		Service:
+			authService,
+		IsProduction: isProduction,
 	}
 
 	router := gin.Default()
 
-	if err := router.SetTrustedProxies(nil); err != nil {
-		log.Fatal(err)
+	router.Use(
+		middleware.RequestID(),
+	)
+
+	router.Use(
+		middleware.RequestLogger(),
+	)
+
+	router.Use(
+		middleware.SecurityHeaders(),
+	)
+
+	router.Use(cors.New(
+		cors.Config{
+			AllowOrigins: []string{
+				"http://localhost:3000",
+			},
+
+			AllowMethods: []string{
+				"GET",
+				"POST",
+				"PUT",
+				"PATCH",
+				"DELETE",
+				"OPTIONS",
+			},
+
+			AllowHeaders: []string{
+				"Origin",
+				"Content-Type",
+				"Authorization",
+			},
+
+			AllowCredentials: true,
+		},
+	))
+
+	err = router.SetTrustedProxies(
+		[]string{
+			"127.0.0.1",
+			"::1",
+		},
+	)
+
+	if err != nil {
+		logger.Log.Fatal(
+			"server startup failed",
+			zap.Error(err),
+		)
 	}
 
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	healthHandler :=
+		&health.Handler{
+			Postgres:
+				pgPool,
+			Redis:
+				redisClient,
+			StartTime:
+				time.Now(),
+	}
+
+	router.GET(
+		"/health",
+		healthHandler.Health,
+	)
 
 	api := router.Group("/api/v1")
 
@@ -61,12 +152,38 @@ func main() {
 	{
 		authRoutes.POST(
 			"/register",
+			middleware.RateLimit(
+				redisClient,
+				10,
+				time.Minute,
+				"register",
+			),
 			authHandler.Register,
 		)
 
 		authRoutes.POST(
 			"/login",
+			middleware.RateLimit(
+				redisClient,
+				10,
+				time.Minute,
+				"login",
+			),
 			authHandler.Login,
+		)
+		authRoutes.POST(
+			"/refresh",
+			middleware.RateLimit(
+				redisClient,
+				20,
+				time.Minute,
+				"refresh",
+			),
+			authHandler.Refresh,
+		)
+		authRoutes.POST(
+			"/logout",
+			authHandler.Logout,
 		)
 
 		protected := authRoutes.Group("/")
@@ -79,6 +196,10 @@ func main() {
 		protected.GET(
 			"/me",
 			authHandler.Me,
+		)
+		protected.POST(
+			"/logout-all",
+			authHandler.LogoutAll,
 		)
 	}
 
@@ -142,10 +263,107 @@ func main() {
 
 	router.GET(
 		"/u/:username/:slug/:key",
+		middleware.RateLimit(
+				redisClient,
+				100,
+				time.Minute,
+				"redirect",
+			),
 		redirectHandler.Redirect,
 	)
 
-	if err := router.Run(":" + cfg.ServerPort); err != nil {
-		log.Fatal(err)
+	server := &http.Server{
+		Addr:
+			":" +
+				cfg.ServerPort,
+
+		Handler:
+			router,
+
+		ReadTimeout:
+			10 * time.Second,
+
+		WriteTimeout:
+			10 * time.Second,
+
+		IdleTimeout:
+			60 * time.Second,
 	}
+
+	go func() {
+
+		logger.Log.Info(
+			"server started",
+			zap.String(
+				"port",
+				cfg.ServerPort,
+			),
+			zap.Bool(
+				"production",
+				isProduction,
+			),
+		)
+
+		if err :=
+			server.ListenAndServe(); err != nil &&
+			err != http.ErrServerClosed {
+
+			logger.Log.Error(
+				"http server error",
+				zap.Error(err),
+			)
+		}
+	}()
+
+	quit := make(
+		chan os.Signal,
+		1,
+	)
+
+	signal.Notify(
+		quit,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+
+	<-quit
+
+	logger.Log.Info(
+		"shutdown signal received",
+	)
+
+	shutdownCtx,
+		cancel :=
+		context.WithTimeout(
+			context.Background(),
+			10*time.Second,
+		)
+
+	defer cancel()
+
+	if err :=
+		server.Shutdown(
+			shutdownCtx,
+		); err != nil {
+
+		logger.Log.Error(
+			"graceful shutdown failed",
+			zap.Error(err),
+		)
+	}
+
+	pgPool.Close()
+
+	if err :=
+		redisClient.Close(); err != nil {
+
+		logger.Log.Error(
+			"redis close failed",
+			zap.Error(err),
+		)
+	}
+
+	logger.Log.Info(
+		"server shutdown complete",
+	)
 }

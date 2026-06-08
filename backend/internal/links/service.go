@@ -466,7 +466,7 @@ func (s *Service) DeleteLink(
 		},
 	)
 
-	s.Queries.DeleteLink(
+	err = s.Queries.DeleteLink(
 		ctx,
 		db.DeleteLinkParams{
 			ID:     link.ID,
