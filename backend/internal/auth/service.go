@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"time"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
@@ -15,6 +16,14 @@ type Service struct {
 	DB      *pgxpool.Pool
 	Secret  string
 }
+
+const (
+	authDBTimeout =
+		3 * time.Second
+
+	authTokenTimeout =
+		2 * time.Second
+)
 
 func (s *Service) Register( 
 	ctx context.Context, 
@@ -46,8 +55,13 @@ func (s *Service) Register(
 		return "", "", err
 	}
 
+	emailCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	_, err = s.Queries.GetUserByEmail(
-		ctx,
+		emailCtx,
 		req.Email,
 	)
 
@@ -61,8 +75,13 @@ func (s *Service) Register(
 		return "","", err
 	}
 
+	usernameCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	_, err = s.Queries.GetUserByUsername(
-		ctx,
+		usernameCtx,
 		req.Username,
 	)
 
@@ -84,8 +103,14 @@ func (s *Service) Register(
 		return "","", err
 	}
 
+	createCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+
 	user, err := s.Queries.CreateUser(
-		ctx,
+		createCtx,
 		db.CreateUserParams{
 			Email: req.Email,
 			Username: req.Username,
@@ -105,8 +130,13 @@ func (s *Service) Register(
 		return "","", err
 	}
 
+	sessionCtx, cancel :=
+		tokenTimeoutContext(ctx)
+
+	defer cancel()
+
 	return s.createSession(
-		ctx,
+		sessionCtx,
 		s.Queries,
 		user,
 		userAgent,
@@ -125,9 +155,13 @@ func (s *Service) Login(
 	req.Email = strings.TrimSpace(
 		strings.ToLower(req.Email),
 	)
+	emailCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
 
 	user, err := s.Queries.GetUserByEmail(
-		ctx,
+		emailCtx,
 		req.Email,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -157,8 +191,13 @@ func (s *Service) Login(
 		)
 	}
 
+	sessionCtx, cancel :=
+		tokenTimeoutContext(ctx)
+
+	defer cancel()
+
 	return s.createSession(
-		ctx,
+		sessionCtx,
 		s.Queries,
 		user,
 		userAgent,
@@ -177,8 +216,13 @@ func (s *Service) Logout(
 			refreshToken,
 		)
 
+	logoutCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	err := s.Queries.DeleteRefreshToken(
-		ctx,
+		logoutCtx,
 		hashedToken,
 	)
 

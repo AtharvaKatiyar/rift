@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/AtharvaKatiyar/rift/internal/constants"
+	"github.com/AtharvaKatiyar/rift/internal/httpx"
 )
 
 func RequestID() gin.HandlerFunc {
@@ -18,6 +19,16 @@ func RequestID() gin.HandlerFunc {
 			constants.RequestIDKey,
 			requestID,
 		)
+
+		ctx := httpx.WithRequestID(
+			c.Request.Context(),
+			requestID,
+		)
+
+		c.Request =
+			c.Request.WithContext(
+				ctx,
+			)
 
 		c.Writer.Header().Set(
 			"X-Request-ID",

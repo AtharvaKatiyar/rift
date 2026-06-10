@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,8 +16,16 @@ import (
 	"github.com/AtharvaKatiyar/rift/internal/cache"
 )
 
-const MaxKeyGenerationAttempts = 5
-const FreeTierLimit = 10
+const (
+	MaxKeyGenerationAttempts = 5
+	FreeTierLimit            = 10
+
+	linksDBTimeout =
+		3 * time.Second
+
+	linksRedisTimeout =
+		500 * time.Millisecond
+)
 
 type Service struct {
 	Queries *db.Queries
@@ -80,16 +89,27 @@ func (s *Service) validateLinkCreation(
 	slug string,
 ) (*db.User, error) {
 
+	userCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+
 	user, err := s.Queries.GetUserByID(
-		ctx,
+		userCtx,
 		userID,
 	)
 	if err != nil {
 		return nil, errors.New("user not found")
 	}
 
+	countCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	count, err := s.Queries.CountUserLinks(
-		ctx,
+		countCtx,
 		userID,
 	)
 	if err != nil {
@@ -120,8 +140,14 @@ func (s *Service) ensureSlugAvailable(
 	slug string,
 ) error {
 
+	slugCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+
 	_, err := s.Queries.GetLinkBySlug(
-		ctx,
+		slugCtx,
 		db.GetLinkBySlugParams{
 			UserID: userID,
 			Slug:   slug,
@@ -153,10 +179,14 @@ func (s *Service) generateUniquePublicKey(
 			return "", err
 		}
 
+		keyCtx, cancel :=
+			dbTimeoutContext(ctx)
+
 		_, err = s.Queries.GetLinkByPublicKey(
-			ctx,
+			keyCtx,
 			publicKey,
 		)
+		cancel()
 
 		if errors.Is(
 			err,
@@ -223,8 +253,13 @@ func (s *Service) CreateLink(
 		return nil, "", err
 	}
 
+	createCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	link, err := s.Queries.CreateLink(
-		ctx,
+		createCtx,
 		db.CreateLinkParams{
 			UserID:    pgUserID,
 			Title:     req.Title,
@@ -258,8 +293,13 @@ func (s *Service) GetUserLinks(
 		return nil, err
 	}
 
+	linksCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	links, err := s.Queries.GetUserLinks(
-		ctx,
+		linksCtx,
 		pgUserID,
 	)
 	if err != nil {
@@ -307,10 +347,14 @@ func (s *Service) UpdateLink(
 	if err != nil {
 		return err
 	}
+	getLinkCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
 
 	existingLink, err :=
 		s.Queries.GetLinkByIDAndUserID(
-			ctx,
+			getLinkCtx,
 			db.GetLinkByIDAndUserIDParams{
 				ID: parsedLinkID,
 				UserID: parsedUserID,
@@ -324,8 +368,13 @@ func (s *Service) UpdateLink(
 	}
 	
 	if existingLink.Slug != createReq.Slug {
+		slugCtx, cancel :=
+			dbTimeoutContext(ctx)
+
+		defer cancel()
+
 		_,err := s.Queries.GetLinkBySlug(
-			ctx,
+			slugCtx,
 			db.GetLinkBySlugParams{
 				UserID: parsedUserID,
 				Slug: createReq.Slug,
@@ -344,10 +393,14 @@ func (s *Service) UpdateLink(
 			return err
 		}
 	}
+	updateCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
 	
 	updatedLink, err :=
 		s.Queries.UpdateLink(
-			ctx,
+			updateCtx,
 			db.UpdateLinkParams{
 				ID:         parsedLinkID,
 				UserID:     parsedUserID,
@@ -361,9 +414,13 @@ func (s *Service) UpdateLink(
 		return err
 	}
 
+	historyCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
 	// Save history
 	_ = s.Queries.CreateLinkHistory(
-		ctx,
+		historyCtx,
 		db.CreateLinkHistoryParams{
 			LinkID: existingLink.ID,
 			OldTargetUrl:
@@ -373,8 +430,13 @@ func (s *Service) UpdateLink(
 		},
 	)
 
+	userCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	user, err := s.Queries.GetUserByID(
-		ctx,
+		userCtx,
 		parsedUserID,
 	)
 
@@ -392,8 +454,13 @@ func (s *Service) UpdateLink(
 		existingLink.UniqueID
 
 	if s.Redis != nil {
+		redisCtx, cancel :=
+			redisTimeoutContext(ctx)
+
+		defer cancel()
+
 		_ = cache.DeleteRedirect(
-			ctx,
+			redisCtx,
 			s.Redis,
 			cacheKey,
 		)
@@ -424,9 +491,14 @@ func (s *Service) GetLink(
 		return nil, err
 	}
 
+	getLinkCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	link, err :=
 		s.Queries.GetLinkByIDAndUserID(
-			ctx,
+			getLinkCtx,
 			db.GetLinkByIDAndUserIDParams{
 				ID: parsedLinkID,
 				UserID: parsedUserID,
@@ -456,9 +528,13 @@ func (s *Service) DeleteLink(
 	if err != nil {
 		return err
 	}
+	historyCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
 
 	_ = s.Queries.CreateLinkHistory(
-		ctx,
+		historyCtx,
 		db.CreateLinkHistoryParams{
 			LinkID: link.ID,
 			OldTargetUrl: link.TargetUrl,
@@ -466,8 +542,13 @@ func (s *Service) DeleteLink(
 		},
 	)
 
+	deleteCtx, deleteCancel :=
+		dbTimeoutContext(ctx)
+
+	defer deleteCancel()
+
 	err = s.Queries.DeleteLink(
-		ctx,
+		deleteCtx,
 		db.DeleteLinkParams{
 			ID:     link.ID,
 			UserID: link.UserID,
@@ -477,9 +558,13 @@ func (s *Service) DeleteLink(
 	if err != nil {
 		return err
 	}
+	userCtx, userCancel :=
+		dbTimeoutContext(ctx)
+
+	defer userCancel()
 
 	user, err := s.Queries.GetUserByID(
-		ctx,
+		userCtx,
 		link.UserID,
 	)
 
@@ -495,8 +580,13 @@ func (s *Service) DeleteLink(
 		link.UniqueID
 
 	if s.Redis != nil {
+		redisCtx, redisCancel :=
+			redisTimeoutContext(ctx)
+
+		defer redisCancel()
+
 		_ = cache.DeleteRedirect(
-			ctx,
+			redisCtx,
 			s.Redis,
 			cacheKey,
 		)
@@ -521,9 +611,14 @@ func (s *Service) ToggleLinkStatus(
 		return err
 	}
 
+	toggleCtx, toggleCancel :=
+		dbTimeoutContext(ctx)
+
+	defer toggleCancel()
+
 	_, err =
 		s.Queries.ToggleLinkStatus(
-			ctx,
+			toggleCtx,
 			db.ToggleLinkStatusParams{
 				ID: link.ID,
 				UserID: link.UserID,
@@ -534,9 +629,12 @@ func (s *Service) ToggleLinkStatus(
 	if err != nil {
 		return err
 	}
+	userCtx, userCancel :=
+		dbTimeoutContext(ctx)
 
+	defer userCancel()
 	user, err := s.Queries.GetUserByID(
-		ctx,
+		userCtx,
 		link.UserID,
 	)
 
@@ -552,8 +650,12 @@ func (s *Service) ToggleLinkStatus(
 		link.UniqueID
 
 	if s.Redis != nil {
+		redisCtx, redisCancel :=
+			redisTimeoutContext(ctx)
+
+		defer redisCancel()
 		_ = cache.DeleteRedirect(
-			ctx,
+			redisCtx,
 			s.Redis,
 			cacheKey,
 		)

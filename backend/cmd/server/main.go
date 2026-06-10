@@ -17,11 +17,13 @@ import (
 	"github.com/AtharvaKatiyar/rift/internal/database"
 	"github.com/AtharvaKatiyar/rift/internal/middleware"
 	"github.com/AtharvaKatiyar/rift/internal/health"
+	"github.com/AtharvaKatiyar/rift/internal/metrics"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
 	authpkg "github.com/AtharvaKatiyar/rift/internal/auth"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	linkspkg "github.com/AtharvaKatiyar/rift/internal/links"
 	redirectpkg "github.com/AtharvaKatiyar/rift/internal/redirect"
+	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
 )
 
 func main() {
@@ -63,7 +65,30 @@ func main() {
 		)
 	}
 
+	clicksService :=
+		&clickspkg.Service{
+			Redis:
+				redisClient,
+
+			Queue:
+				make(
+					chan string,
+					10000,
+				),
+		}
+
+	clicksService.StartWorkers(
+		ctx,
+		200,
+	)
+
 	queries := db.New(pgPool)
+
+	clickspkg.StartFlushWorker(
+		ctx,
+		queries,
+		clicksService,
+	)
 
 	authService := &authpkg.Service{
 		Queries: queries,
@@ -141,9 +166,26 @@ func main() {
 				time.Now(),
 	}
 
+	metricsHandler :=
+		&metrics.Handler{
+			Postgres:
+				pgPool,
+
+			Redis:
+				redisClient,
+
+			Clicks:
+				clicksService,
+		}
+
 	router.GET(
 		"/health",
 		healthHandler.Health,
+	)
+
+	router.GET(
+		"/metrics",
+		metricsHandler.Metrics,
 	)
 
 	api := router.Group("/api/v1")
@@ -254,7 +296,8 @@ func main() {
 
 	redirectService := &redirectpkg.Service{
 		Queries: queries,
-		Redis: redisClient,
+		Redis:   redisClient,
+		Clicks:  clicksService,
 	}
 
 	redirectHandler := &redirectpkg.Handler{

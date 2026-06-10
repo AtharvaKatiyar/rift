@@ -88,7 +88,7 @@ func ClearAuthCookies(
 			Secure:
 				isProduction,
 			SameSite:
-				http.SameSiteStrictMode,
+				http.SameSiteLaxMode,
 		},
 	)
 }

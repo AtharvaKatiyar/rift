@@ -19,9 +19,14 @@ func (s *Service) LogoutAll(
 		return err
 	}
 
+	logoutCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	return s.Queries.
 		DeleteUserRefreshTokens(
-			ctx,
+			logoutCtx,
 			pgUserID,
 		)
 }

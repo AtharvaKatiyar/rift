@@ -65,3 +65,5 @@ redis-data/
 # ==========================
 coverage/
 *.coverprofile
+
+*.txt

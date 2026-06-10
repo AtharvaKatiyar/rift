@@ -49,12 +49,9 @@ func HandleAuthSuccess(
 	status int,
 	message string,
 ) {
-
-	c.JSON(
+	httpx.Success(
+		c,
 		status,
-		gin.H{
-			"message":
-				message,
-		},
+		message,
 	)
 }

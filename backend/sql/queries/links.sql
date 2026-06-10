@@ -105,3 +105,10 @@ SET
 WHERE id = $1
 AND user_id = $2
 RETURNING *;
+
+-- name: IncrementClickCountBy :exec
+UPDATE central_links
+SET click_count =
+	click_count + sqlc.arg(increment_by)
+WHERE id =
+	sqlc.arg(id);

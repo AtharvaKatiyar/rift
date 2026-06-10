@@ -44,8 +44,13 @@ func (s *Service) createSession(
 			refreshToken,
 		)
 
+	dbCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
 	err = q.CreateRefreshToken(
-		ctx,
+		dbCtx,
 		db.CreateRefreshTokenParams{
 			UserID: user.ID,
 			TokenHash:

@@ -332,6 +332,24 @@ func (q *Queries) IncrementClickCount(ctx context.Context, id pgtype.UUID) error
 	return err
 }
 
+const incrementClickCountBy = `-- name: IncrementClickCountBy :exec
+UPDATE central_links
+SET click_count =
+	click_count + $1
+WHERE id =
+	$2
+`
+
+type IncrementClickCountByParams struct {
+	IncrementBy int64
+	ID          pgtype.UUID
+}
+
+func (q *Queries) IncrementClickCountBy(ctx context.Context, arg IncrementClickCountByParams) error {
+	_, err := q.db.Exec(ctx, incrementClickCountBy, arg.IncrementBy, arg.ID)
+	return err
+}
+
 const toggleLinkStatus = `-- name: ToggleLinkStatus :one
 UPDATE central_links
 SET

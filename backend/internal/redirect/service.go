@@ -6,20 +6,29 @@ import (
 	"time"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/AtharvaKatiyar/rift/internal/cache"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
-	"github.com/AtharvaKatiyar/rift/internal/utils"
+	"github.com/AtharvaKatiyar/rift/internal/httpx"
+	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
 )
 
 type Service struct {
 	Queries *db.Queries
 	Redis   *redis.Client
+	Clicks  *clickspkg.Service
 }
+
+const (
+	redirectRedisTimeout =
+		500 * time.Millisecond
+
+	redirectDBTimeout =
+		1 * time.Second
+)
 
 func buildCacheKey(
 	username string,
@@ -43,6 +52,8 @@ func (s *Service) ResolveRedirect(
 	key string,
 ) (string, error) {
 
+	start := time.Now()
+
 	cacheKey := buildCacheKey(
 		username,
 		slug,
@@ -56,12 +67,33 @@ func (s *Service) ResolveRedirect(
 		username,
 		slug,
 	); found || err != nil {
+
+		// logger.Log.Debug(
+		// 	"redirect resolved",
+		// 	zap.Bool(
+		// 		"cache_hit",
+		// 		found,
+		// 	),
+		// 	zap.Duration(
+		// 		"latency",
+		// 		time.Since(start),
+		// 	),
+		// )
+
 		return url, err
 	}
 
 	// DB fallback
+	dbCtx, cancel :=
+		context.WithTimeout(
+			ctx,
+			redirectDBTimeout,
+		)
+
+	defer cancel()
+
 	link, err := s.Queries.GetLinkForRedirect(
-		ctx,
+		dbCtx,
 		key,
 	)
 	if err != nil {
@@ -79,7 +111,23 @@ func (s *Service) ResolveRedirect(
 	}
 
 	s.cacheRedirect(ctx, cacheKey, link)
-	s.incrementClickCount(link.ID)
+	if s.Clicks != nil {
+		s.Clicks.EnqueueClick(
+			link.ID.String(),
+		)
+	}
+
+	logger.Log.Debug(
+		"redirect resolved",
+		zap.Bool(
+			"cache_hit",
+			false,
+		),
+		zap.Duration(
+			"latency",
+			time.Since(start),
+		),
+	)
 
 	return link.TargetUrl, nil
 }
@@ -91,13 +139,30 @@ func (s *Service) resolveFromCache(
 	slug string,
 ) (string, bool, error) {
 
+	redisCtx, cancel :=
+		context.WithTimeout(
+			ctx,
+			redirectRedisTimeout,
+		)
+
+	defer cancel()
+
 	cachedData, err := cache.GetRedirect(
-		ctx,
+		redisCtx,
 		s.Redis,
 		cacheKey,
 	)
 
 	if err == nil {
+
+		logger.Log.Debug(
+			"redirect cache hit",
+			zap.String(
+				"cache_key",
+				cacheKey,
+			),
+		)
+
 		if err := validateLink(
 			cachedData.Username,
 			cachedData.Slug,
@@ -108,11 +173,10 @@ func (s *Service) resolveFromCache(
 			return "", true, err
 		}
 
-		linkID, err := utils.ParseUUID(
-			cachedData.LinkID,
-		)
-		if err == nil {
-			s.incrementClickCount(linkID)
+		if s.Clicks != nil {
+			s.Clicks.EnqueueClick(
+				cachedData.LinkID,
+			)
 		}
 
 		return cachedData.TargetURL,
@@ -121,6 +185,13 @@ func (s *Service) resolveFromCache(
 	}
 
 	if errors.Is(err, redis.Nil) {
+		logger.Log.Debug(
+			"redirect cache miss",
+			zap.String(
+				"cache_key",
+				cacheKey,
+			),
+		)
 		return "", false, nil
 	}
 
@@ -128,8 +199,8 @@ func (s *Service) resolveFromCache(
 		"redis lookup failed",
 		zap.Error(err),
 		zap.String(
-			"cache_key",
-			cacheKey,
+			"request_id",
+			httpx.RequestIDFromContext(ctx),
 		),
 	)
 
@@ -161,8 +232,16 @@ func (s *Service) cacheRedirect(
 	cacheKey string,
 	link db.GetLinkForRedirectRow,
 ) {
+	cacheCtx, cancel :=
+		context.WithTimeout(
+			ctx,
+			redirectRedisTimeout,
+		)
+
+	defer cancel()
+
 	err := cache.SetRedirect(
-		ctx,
+		cacheCtx,
 		s.Redis,
 		cacheKey,
 		cache.RedirectCache{
@@ -182,36 +261,38 @@ func (s *Service) cacheRedirect(
 	}
 }
 
-func (s *Service) incrementClickCount(
-	linkID pgtype.UUID,
-) {
-	go func(
-		linkID pgtype.UUID,
-	) {
 
-		incrementCtx,
-			cancel :=
-			context.WithTimeout(
-				context.Background(),
-				2*time.Second,
-			)
 
-		defer cancel()
+// func (s *Service) incrementClickCount(
+// 	linkID pgtype.UUID,
+// ) {
+// 	go func(
+// 		linkID pgtype.UUID,
+// 	) {
 
-		if err := s.Queries.IncrementClickCount(
-			incrementCtx,
-			linkID,
-		); err != nil {
+// 		incrementCtx,
+// 			cancel :=
+// 			context.WithTimeout(
+// 				context.Background(),
+// 				clickIncrementTimeout,
+// 			)
 
-			logger.Log.Warn(
-				"click increment failed",
-				zap.Error(err),
-				zap.String(
-					"link_id",
-					linkID.String(),
-				),
-			)
-		}
+// 		defer cancel()
 
-	}(linkID)
-}
+// 		if err := s.Queries.IncrementClickCount(
+// 			incrementCtx,
+// 			linkID,
+// 		); err != nil {
+
+// 			logger.Log.Warn(
+// 				"click increment failed",
+// 				zap.Error(err),
+// 				zap.String(
+// 					"link_id",
+// 					linkID.String(),
+// 				),
+// 			)
+// 		}
+
+// 	}(linkID)
+// }

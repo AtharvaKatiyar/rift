@@ -16,6 +16,7 @@ func RequestID(
 		)
 
 	if !ok {
+		println("REQUEST ID MISSING")
 		return ""
 	}
 
@@ -23,8 +24,9 @@ func RequestID(
 		requestID.(string)
 
 	if !ok {
+		println("REQUEST ID INVALID TYPE")
 		return ""
 	}
-
+	println("REQUEST ID:", id)
 	return id
 }

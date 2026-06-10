@@ -59,9 +59,15 @@ func (s *Service) RefreshSession(
 			tx,
 		)
 
+	refreshCtx, cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+
 	storedToken, err :=
 		qtx.GetRefreshTokenForUpdate(
-			ctx,
+			refreshCtx,
 			hashedToken,
 		)
 
@@ -87,7 +93,7 @@ func (s *Service) RefreshSession(
 
 		err :=
 			qtx.DeleteUserRefreshTokens(
-				ctx,
+				refreshCtx,
 				storedToken.UserID,
 			)
 
@@ -122,7 +128,7 @@ func (s *Service) RefreshSession(
 
 	user, err :=
 		qtx.GetUserByID(
-			ctx,
+			refreshCtx,
 			storedToken.UserID,
 		)
 
@@ -134,7 +140,7 @@ func (s *Service) RefreshSession(
 		newRefreshToken,
 		err :=
 		s.createSession(
-			ctx,
+			refreshCtx,
 			qtx,
 			user,
 			userAgent,
@@ -152,7 +158,7 @@ func (s *Service) RefreshSession(
 
 	err =
 		qtx.ReplaceRefreshToken(
-			ctx,
+			refreshCtx,
 			db.ReplaceRefreshTokenParams{
 				TokenHash:
 					hashedToken,
