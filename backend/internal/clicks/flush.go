@@ -17,6 +17,21 @@ func flushClicks(
 	queries *db.Queries,
 	service *Service,
 ) {
+	acquired, err :=
+		service.Redis.SetNX(
+			ctx,
+			"click_flush_lock",
+			"locked",
+			30*time.Second,
+		).Result()
+
+	if err != nil {
+		return
+	}
+
+	if !acquired {
+		return
+	}
 
 	keys, err :=
 		service.Redis.Keys(
@@ -28,8 +43,7 @@ func flushClicks(
 		return
 	}
 
-	for _, redisKey :=
-		range keys {
+	for _, redisKey := range keys {
 
 		flushClickKey(
 			ctx,
@@ -77,11 +91,9 @@ func flushClickKey(
 		queries.IncrementClickCountBy(
 			ctx,
 			db.IncrementClickCountByParams{
-				ID:
-					linkID,
+				ID: linkID,
 
-				IncrementBy:
-					count,
+				IncrementBy: count,
 			},
 		)
 

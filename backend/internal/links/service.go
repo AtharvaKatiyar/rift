@@ -14,11 +14,11 @@ import (
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	"github.com/AtharvaKatiyar/rift/internal/utils"
 	"github.com/AtharvaKatiyar/rift/internal/cache"
+	subscriptionpkg "github.com/AtharvaKatiyar/rift/internal/subscriptions"
 )
 
 const (
 	MaxKeyGenerationAttempts = 5
-	FreeTierLimit            = 10
 
 	linksDBTimeout =
 		3 * time.Second
@@ -87,6 +87,7 @@ func (s *Service) validateLinkCreation(
 	ctx context.Context,
 	userID pgtype.UUID,
 	slug string,
+	plan string,
 ) (*db.User, error) {
 
 	userCtx, cancel :=
@@ -116,10 +117,17 @@ func (s *Service) validateLinkCreation(
 		return nil, err
 	}
 
-	if count >= FreeTierLimit {
-		return nil, errors.New(
-			"free tier limit reached",
-		)
+	planLimit :=
+	subscriptionpkg.GetPlanLimit(
+		plan,
+	)
+
+	if count >= planLimit {
+
+		return nil,
+			errors.New(
+				"plan limit reached",
+			)
 	}
 
 	err = s.ensureSlugAvailable(
@@ -237,10 +245,22 @@ func (s *Service) CreateLink(
 		return nil, "", err
 	}
 
+	subscription, err :=
+		s.Queries.GetUserSubscription(
+			ctx,
+			pgUserID,
+		)
+
+	if err != nil {
+		return nil, "",
+			err
+	}
+
 	user, err := s.validateLinkCreation(
 		ctx,
 		pgUserID,
 		req.Slug,
+		string(subscription.Plan),
 	)
 	if err != nil {
 		return nil, "", err
@@ -284,13 +304,15 @@ func (s *Service) CreateLink(
 func (s *Service) GetUserLinks(
 	ctx context.Context,
 	userID string,
-) ([]db.CentralLink, error) {
+	page int32,
+	pageSize  int32,
+) ([]db.CentralLink, int64, int32, error) {
 
 	pgUserID, err := parseUUID(
 		userID,
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, err
 	}
 
 	linksCtx, cancel :=
@@ -298,15 +320,62 @@ func (s *Service) GetUserLinks(
 
 	defer cancel()
 
-	links, err := s.Queries.GetUserLinks(
-		linksCtx,
-		pgUserID,
-	)
+	totalItems, err :=
+		s.Queries.CountUserLinks(
+			linksCtx,
+			pgUserID,
+		)
 	if err != nil {
-		return nil, err
+		return nil,
+			0,
+			0,
+			err
 	}
 
-	return links, nil
+	totalPages :=
+		(totalItems +
+			int64(pageSize) - 1) /
+			int64(pageSize)
+
+	if totalPages == 0 {
+
+		totalPages = 1
+	}
+
+	if int64(page) >
+		totalPages {
+
+		page =
+			int32(
+				totalPages,
+			)
+	}
+
+	offset :=
+		(page - 1) *
+			pageSize
+
+	links, err :=
+		s.Queries.GetUserLinks(
+			linksCtx,
+
+			db.GetUserLinksParams{
+				UserID:
+					pgUserID,
+
+				Limit:
+					pageSize,
+
+				Offset:
+					offset,
+			},
+		)
+
+	if err != nil {
+		return nil,  0, 0, err
+	}
+
+	return links, totalItems, page, nil
 }
 
 func (s *Service) UpdateLink(

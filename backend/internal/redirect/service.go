@@ -14,12 +14,14 @@ import (
 	"github.com/AtharvaKatiyar/rift/internal/logger"
 	"github.com/AtharvaKatiyar/rift/internal/httpx"
 	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
+	analyticspkg "github.com/AtharvaKatiyar/rift/internal/analytics"
 )
 
 type Service struct {
-	Queries *db.Queries
-	Redis   *redis.Client
-	Clicks  *clickspkg.Service
+	Queries 	*db.Queries
+	Redis   	*redis.Client
+	Clicks  	*clickspkg.Service
+	Analytics   *analyticspkg.Service
 }
 
 const (
@@ -50,7 +52,7 @@ func (s *Service) ResolveRedirect(
 	username string,
 	slug string,
 	key string,
-) (string, error) {
+) (string, string, error) {
 
 	start := time.Now()
 
@@ -61,26 +63,26 @@ func (s *Service) ResolveRedirect(
 	)
 
 	// Try cache first
-	if url, found, err := s.resolveFromCache(
+	if url,linkId, found, err := s.resolveFromCache(
 		ctx,
 		cacheKey,
 		username,
 		slug,
 	); found || err != nil {
 
-		// logger.Log.Debug(
-		// 	"redirect resolved",
-		// 	zap.Bool(
-		// 		"cache_hit",
-		// 		found,
-		// 	),
-		// 	zap.Duration(
-		// 		"latency",
-		// 		time.Since(start),
-		// 	),
-		// )
+		logger.Log.Debug(
+			"redirect resolved",
+			zap.Bool(
+				"cache_hit",
+				found,
+			),
+			zap.Duration(
+				"latency",
+				time.Since(start),
+			),
+		)
 
-		return url, err
+		return url,linkId, err
 	}
 
 	// DB fallback
@@ -97,7 +99,7 @@ func (s *Service) ResolveRedirect(
 		key,
 	)
 	if err != nil {
-		return "", errors.New("link not found")
+		return "", "", errors.New("link not found")
 	}
 
 	if err := validateLink(
@@ -107,7 +109,7 @@ func (s *Service) ResolveRedirect(
 		username,
 		slug,
 	); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	s.cacheRedirect(ctx, cacheKey, link)
@@ -129,7 +131,7 @@ func (s *Service) ResolveRedirect(
 		),
 	)
 
-	return link.TargetUrl, nil
+	return link.TargetUrl, link.ID.String(), nil
 }
 
 func (s *Service) resolveFromCache(
@@ -137,7 +139,7 @@ func (s *Service) resolveFromCache(
 	cacheKey string,
 	username string,
 	slug string,
-) (string, bool, error) {
+) (string, string, bool, error) {
 
 	redisCtx, cancel :=
 		context.WithTimeout(
@@ -170,7 +172,7 @@ func (s *Service) resolveFromCache(
 			username,
 			slug,
 		); err != nil {
-			return "", true, err
+			return "", "", true, err
 		}
 
 		if s.Clicks != nil {
@@ -180,6 +182,7 @@ func (s *Service) resolveFromCache(
 		}
 
 		return cachedData.TargetURL,
+			cachedData.LinkID,
 			true,
 			nil
 	}
@@ -192,7 +195,7 @@ func (s *Service) resolveFromCache(
 				cacheKey,
 			),
 		)
-		return "", false, nil
+		return "", "", false, nil
 	}
 
 	logger.Log.Warn(
@@ -204,7 +207,7 @@ func (s *Service) resolveFromCache(
 		),
 	)
 
-	return "", false, nil
+	return "", "", false, nil
 }
 
 func validateLink(

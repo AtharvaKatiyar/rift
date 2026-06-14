@@ -32,7 +32,12 @@ func SetAuthCookies(
 			Secure:
 				isProduction,
 			SameSite:
-				http.SameSiteLaxMode,
+				func() http.SameSite{
+					if isProduction {
+						return http.SameSiteStrictMode
+					}
+					return http.SameSiteLaxMode
+				}(),
 		},
 	)
 
@@ -51,7 +56,12 @@ func SetAuthCookies(
 			Secure:
 				isProduction,
 			SameSite:
-				http.SameSiteLaxMode,
+				func() http.SameSite{
+					if isProduction {
+						return http.SameSiteStrictMode
+					}
+					return http.SameSiteLaxMode
+				}(),
 		},
 	)
 }
@@ -72,7 +82,12 @@ func ClearAuthCookies(
 			Secure:
 				isProduction,
 			SameSite:
-				http.SameSiteLaxMode,
+				func() http.SameSite{
+					if isProduction {
+						return http.SameSiteStrictMode
+					}
+					return http.SameSiteLaxMode
+				}(),
 		},
 	)
 
@@ -88,7 +103,12 @@ func ClearAuthCookies(
 			Secure:
 				isProduction,
 			SameSite:
-				http.SameSiteLaxMode,
+				func() http.SameSite{
+					if isProduction {
+						return http.SameSiteStrictMode
+					}
+					return http.SameSiteLaxMode
+				}(),
 		},
 	)
 }

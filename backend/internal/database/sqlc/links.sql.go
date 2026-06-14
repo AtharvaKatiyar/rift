@@ -286,10 +286,18 @@ FROM central_links
 WHERE user_id = $1
 AND is_deleted = FALSE
 ORDER BY created_at DESC
+LIMIT $2
+OFFSET $3
 `
 
-func (q *Queries) GetUserLinks(ctx context.Context, userID pgtype.UUID) ([]CentralLink, error) {
-	rows, err := q.db.Query(ctx, getUserLinks, userID)
+type GetUserLinksParams struct {
+	UserID pgtype.UUID
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetUserLinks(ctx context.Context, arg GetUserLinksParams) ([]CentralLink, error) {
+	rows, err := q.db.Query(ctx, getUserLinks, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

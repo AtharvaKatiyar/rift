@@ -20,28 +20,70 @@ type Config struct {
 	JWTSecret        string
 	JWTExpiration    string
 	BaseURL			 string
+	FrontendURL		 string
+	EnableWorkers	 bool
 	AppEnv			 string
 }
 
 func LoadConfig() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println(".env not found")
+	env :=
+		os.Getenv(
+			"APP_ENV",
+		)
+
+	if env == "" {
+		env = "development"
+	}
+	if os.Getenv("DOCKER_ENV") != "true"{
+	
+		var err error
+	
+		switch env {
+	
+		case "production":
+	
+			err =
+				godotenv.Load(
+					".env.production",
+				)
+	
+		case "test":
+	
+			err =
+				godotenv.Load(
+					".env.test",
+				)
+	
+		default:
+	
+			err =
+				godotenv.Load(
+					".env.development",
+				)
+		}
+		if err != nil {
+			log.Println(
+				"env file not found:",
+				err,
+			)
+		}
 	}
 	return &Config{
-		PostgresUser:     os.Getenv("POSTGRES_USER"),
-		PostgresPassword: os.Getenv("POSTGRES_PASSWORD"),
-		PostgresDB:       os.Getenv("POSTGRES_DB"),
-		PostgresPort:     os.Getenv("POSTGRES_PORT"),
-		PostgresSSLMode:  os.Getenv("POSTGRES_SSLMODE"),
-		PostgresHost:     os.Getenv("POSTGRES_HOST"),
-		ServerPort:       os.Getenv("PORT"),
-		RedisPort:        os.Getenv("REDIS_PORT"),
-		RedisHost:        os.Getenv("REDIS_HOST"),
-		RedisPassword:    os.Getenv("REDIS_PASSWORD"),
-		JWTSecret:        os.Getenv("JWT_SECRET"),
-		JWTExpiration:    os.Getenv("JWT_EXPIRATION"),
-		BaseURL:          os.Getenv("BASE_URL"),
-		AppEnv:           os.Getenv("APP_ENV"),
+		PostgresUser:     MustGetEnv("POSTGRES_USER"),
+		PostgresPassword: MustGetEnv("POSTGRES_PASSWORD"),
+		PostgresDB:       MustGetEnv("POSTGRES_DB"),
+		PostgresPort:     MustGetEnv("POSTGRES_PORT"),
+		PostgresSSLMode:  MustGetEnv("POSTGRES_SSLMODE"),
+		PostgresHost:     MustGetEnv("POSTGRES_HOST"),
+		ServerPort:       MustGetEnv("PORT"),
+		RedisPort:        MustGetEnv("REDIS_PORT"),
+		RedisHost:        MustGetEnv("REDIS_HOST"),
+		RedisPassword:    MustGetEnv("REDIS_PASSWORD"),
+		JWTSecret:        MustGetEnv("JWT_SECRET"),
+		JWTExpiration:    MustGetEnv("JWT_EXPIRATION"),
+		BaseURL:          MustGetEnv("BASE_URL"),
+		FrontendURL:      MustGetEnv("FRONTEND_URL"),
+		EnableWorkers:    MustGetEnv("ENABLE_WORKERS") == "true",
+		AppEnv:           env,
 	}
 }

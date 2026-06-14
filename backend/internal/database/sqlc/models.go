@@ -5,8 +5,100 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+	"net/netip"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type SubscriptionPlan string
+
+const (
+	SubscriptionPlanFree    SubscriptionPlan = "free"
+	SubscriptionPlanStarter SubscriptionPlan = "starter"
+	SubscriptionPlanPro     SubscriptionPlan = "pro"
+)
+
+func (e *SubscriptionPlan) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SubscriptionPlan(s)
+	case string:
+		*e = SubscriptionPlan(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SubscriptionPlan: %T", src)
+	}
+	return nil
+}
+
+type NullSubscriptionPlan struct {
+	SubscriptionPlan SubscriptionPlan
+	Valid            bool // Valid is true if SubscriptionPlan is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSubscriptionPlan) Scan(value interface{}) error {
+	if value == nil {
+		ns.SubscriptionPlan, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SubscriptionPlan.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSubscriptionPlan) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SubscriptionPlan), nil
+}
+
+type SubscriptionStatus string
+
+const (
+	SubscriptionStatusActive    SubscriptionStatus = "active"
+	SubscriptionStatusInactive  SubscriptionStatus = "inactive"
+	SubscriptionStatusPastDue   SubscriptionStatus = "past_due"
+	SubscriptionStatusCancelled SubscriptionStatus = "cancelled"
+	SubscriptionStatusExpired   SubscriptionStatus = "expired"
+)
+
+func (e *SubscriptionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SubscriptionStatus(s)
+	case string:
+		*e = SubscriptionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SubscriptionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullSubscriptionStatus struct {
+	SubscriptionStatus SubscriptionStatus
+	Valid              bool // Valid is true if SubscriptionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSubscriptionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.SubscriptionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SubscriptionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSubscriptionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SubscriptionStatus), nil
+}
 
 type CentralLink struct {
 	ID         pgtype.UUID
@@ -23,12 +115,44 @@ type CentralLink struct {
 	DeletedAt  pgtype.Timestamp
 }
 
+type LinkAnalytic struct {
+	ID          pgtype.UUID
+	LinkID      pgtype.UUID
+	Referrer    pgtype.Text
+	Country     pgtype.Text
+	City        pgtype.Text
+	Browser     pgtype.Text
+	Os          pgtype.Text
+	Device      pgtype.Text
+	IpAddress   *netip.Addr
+	ClickedAt   pgtype.Timestamptz
+	UtmSource   pgtype.Text
+	UtmMedium   pgtype.Text
+	UtmCampaign pgtype.Text
+	UtmTerm     pgtype.Text
+	UtmContent  pgtype.Text
+	IsBot       bool
+}
+
 type LinkHistory struct {
 	ID           pgtype.UUID
 	LinkID       pgtype.UUID
 	OldTargetUrl string
 	NewTargetUrl string
 	ChangedAt    pgtype.Timestamptz
+}
+
+type PaymentEvent struct {
+	ID              pgtype.UUID
+	ProviderEventID string
+	ProviderName    string
+	EventType       string
+	Processed       bool
+	Payload         []byte
+	CreatedAt       pgtype.Timestamptz
+	UserID          pgtype.UUID
+	Plan            pgtype.Text
+	IdempotencyKey  pgtype.Text
 }
 
 type RefreshToken struct {
@@ -53,4 +177,18 @@ type User struct {
 	Plan           string
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
+}
+
+type UserSubscription struct {
+	ID                     pgtype.UUID
+	UserID                 pgtype.UUID
+	Plan                   SubscriptionPlan
+	Status                 SubscriptionStatus
+	ProviderCustomerID     pgtype.Text
+	ProviderSubscriptionID pgtype.Text
+	CurrentPeriodStart     pgtype.Timestamptz
+	CurrentPeriodEnd       pgtype.Timestamptz
+	CancelAtPeriodEnd      bool
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
 }

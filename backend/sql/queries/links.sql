@@ -17,13 +17,14 @@ SELECT *
 FROM central_links
 WHERE user_id = $1
 AND is_deleted = FALSE
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2
+OFFSET $3;
 
 -- name: GetLinkByID :one
 SELECT *
 FROM central_links
 WHERE id = $1;
-
 
 -- name: GetLinkBySlug :one
 SELECT *

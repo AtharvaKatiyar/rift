@@ -26,7 +26,9 @@ func (h *Handler) Redirect(
 		"key",
 	)
 
-	targetURL, err :=
+	targetURL,
+	linkID,
+	err :=
 		h.Service.ResolveRedirect(
 			c.Request.Context(),
 			username,
@@ -50,6 +52,15 @@ func (h *Handler) Redirect(
 		)
 
 		return
+	}
+
+	if h.Service.Analytics != nil {
+
+		go h.Service.Analytics.TrackClick(
+			c.Request.Context(),
+			linkID,
+			c,
+		)
 	}
 
 	c.Redirect(

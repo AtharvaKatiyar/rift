@@ -4,6 +4,9 @@
 .env
 backend/.env
 *.env
+*.env.development
+*.env.production
+*.env.test
 
 # ==========================
 # Go build files

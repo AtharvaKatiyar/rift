@@ -14,6 +14,8 @@ type Handler struct {
 	Postgres *pgxpool.Pool
 	Redis    *redis.Client
 	StartTime time.Time
+	Instance  string
+	Workers   bool
 }
 
 func (h *Handler) Health(
@@ -60,6 +62,11 @@ func (h *Handler) Health(
 				time.Since(
 					h.StartTime,
 				).String(),
+			"instance":
+				h.Instance,
+
+			"workers":
+				h.Workers,
 		},
 	)
 }

@@ -108,26 +108,79 @@ func (s *Service) Register(
 
 	defer cancel()
 
+	tx, err :=
+		s.DB.BeginTx(
+			createCtx,
+			pgx.TxOptions{},
+		)
 
-	user, err := s.Queries.CreateUser(
-		createCtx,
-		db.CreateUserParams{
-			Email: req.Email,
-			Username: req.Username,
-			PasswordHash: pgtype.Text{
-				String: hashedPassword,
-				Valid: true,
-			},
-			GoogleID: pgtype.Text{
-				Valid: false,
-			},
-			ProfilePicture: pgtype.Text{
-				Valid: false,
-			},
-		},
-	)
 	if err != nil {
-		return "","", err
+		return "", "", err
+	}
+
+	defer tx.Rollback(
+		createCtx,
+	)
+
+	txQueries :=
+		s.Queries.WithTx(
+			tx,
+		)
+
+	user, err :=
+		txQueries.CreateUser(
+			createCtx,
+			db.CreateUserParams{
+				Email:
+					req.Email,
+
+				Username:
+					req.Username,
+
+				PasswordHash:
+					pgtype.Text{
+						String:
+							hashedPassword,
+
+						Valid:
+							true,
+					},
+
+				GoogleID:
+					pgtype.Text{
+						Valid:
+							false,
+					},
+
+				ProfilePicture:
+					pgtype.Text{
+						Valid:
+							false,
+					},
+			},
+		)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	_, err =
+		txQueries.CreateUserSubscription(
+			createCtx,
+			user.ID,
+		)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	err =
+		tx.Commit(
+			createCtx,
+		)
+
+	if err != nil {
+		return "", "", err
 	}
 
 	sessionCtx, cancel :=

@@ -19,24 +19,46 @@ import (
 	"github.com/AtharvaKatiyar/rift/internal/health"
 	"github.com/AtharvaKatiyar/rift/internal/metrics"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
+	"github.com/AtharvaKatiyar/rift/internal/geoip"
 	authpkg "github.com/AtharvaKatiyar/rift/internal/auth"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	linkspkg "github.com/AtharvaKatiyar/rift/internal/links"
 	redirectpkg "github.com/AtharvaKatiyar/rift/internal/redirect"
 	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
+	analyticspkg "github.com/AtharvaKatiyar/rift/internal/analytics"
+	subscriptionpkg "github.com/AtharvaKatiyar/rift/internal/subscriptions"
 )
 
 func main() {
 	
 	cfg := config.LoadConfig()
+
+	hostname, err :=
+		os.Hostname()
+
+	if err != nil {
+		hostname = "unknown"
+	}
 	
-	ctx := context.Background()
+	appCtx,
+		appCancel :=
+		context.WithCancel(
+			context.Background(),
+		)
+
+	defer appCancel()
 	
 	isProduction :=
 		cfg.AppEnv ==
 			"production"
+	
+	if isProduction {
+		gin.SetMode(
+			gin.ReleaseMode,
+		)
+	}
 
-	err := logger.Init(
+	err = logger.Init(
 		isProduction,
 	)
 
@@ -49,7 +71,7 @@ func main() {
 
 	defer logger.Sync()
 
-	pgPool, err := database.ConnectPostgres(ctx, cfg)
+	pgPool, err := database.ConnectPostgres(appCtx, cfg)
 	if err != nil {
 		logger.Log.Fatal(
 			"postgres connection failed",
@@ -57,7 +79,7 @@ func main() {
 		)
 	}
 
-	redisClient, err := cache.ConnectRedis(ctx, cfg)
+	redisClient, err := cache.ConnectRedis(appCtx, cfg)
 	if err != nil {
 		logger.Log.Fatal(
 			"redis connection failed",
@@ -65,6 +87,21 @@ func main() {
 		)
 	}
 
+	geoService, err :=
+		geoip.New(
+			"assets/geoip/GeoLite2-City.mmdb",
+		)
+
+	if err != nil {
+
+		logger.Log.Fatal(
+			"geoip initialization failed",
+			zap.Error(err),
+		)
+	}
+
+	queries := db.New(pgPool)
+	
 	clicksService :=
 		&clickspkg.Service{
 			Redis:
@@ -76,19 +113,42 @@ func main() {
 					10000,
 				),
 		}
+	analyticsService :=
+		&analyticspkg.Service{
+			Queries:
+				queries,
 
-	clicksService.StartWorkers(
-		ctx,
-		200,
-	)
+			Queue: make(
+				chan db.CreateLinkAnalyticsParams,
+				10000,
+			),
 
-	queries := db.New(pgPool)
+			GeoIP:
+				geoService,
+		}
 
-	clickspkg.StartFlushWorker(
-		ctx,
-		queries,
-		clicksService,
-	)
+	if cfg.EnableWorkers{
+		logger.Log.Info(
+			"starting background workers",
+		)
+
+		clicksService.StartWorkers(
+			appCtx,
+			200,
+		)
+	
+	
+		clickspkg.StartFlushWorker(
+			appCtx,
+			queries,
+			clicksService,
+		)
+		analyticsService.StartWorkers(
+			appCtx,
+			20,
+		)
+	}
+		
 
 	authService := &authpkg.Service{
 		Queries: queries,
@@ -102,6 +162,18 @@ func main() {
 			authService,
 		IsProduction: isProduction,
 	}
+
+	subscriptionService :=
+		&subscriptionpkg.Service{
+			Queries:
+				queries,
+		}
+
+	subscriptionHandler :=
+		&subscriptionpkg.Handler{
+			Service:
+				subscriptionService,
+		}
 
 	router := gin.Default()
 
@@ -120,7 +192,7 @@ func main() {
 	router.Use(cors.New(
 		cors.Config{
 			AllowOrigins: []string{
-				"http://localhost:3000",
+				cfg.FrontendURL,
 			},
 
 			AllowMethods: []string{
@@ -136,6 +208,7 @@ func main() {
 				"Origin",
 				"Content-Type",
 				"Authorization",
+				"Accept",
 			},
 
 			AllowCredentials: true,
@@ -144,8 +217,9 @@ func main() {
 
 	err = router.SetTrustedProxies(
 		[]string{
-			"127.0.0.1",
-			"::1",
+			"172.16.0.0/12",
+			"10.0.0.0/8",
+			"192.168.0.0/16",
 		},
 	)
 
@@ -164,6 +238,10 @@ func main() {
 				redisClient,
 			StartTime:
 				time.Now(),
+			Instance:
+				hostname,
+			Workers:
+				cfg.EnableWorkers,
 	}
 
 	metricsHandler :=
@@ -255,12 +333,35 @@ func main() {
 		Service: linksService,
 	}
 
+	analyticsHandler :=
+		&analyticspkg.Handler{
+			Service:
+				analyticsService,
+		}
+
 	linksRoutes := api.Group(
 		"/links",
 		authpkg.AuthMiddleware(
 			cfg.JWTSecret,
 		),
 	)
+	subscriptionRoutes := api.Group(
+		"/subscription",
+		authpkg.AuthMiddleware(
+			cfg.JWTSecret,
+		),
+	)
+
+	{
+		subscriptionRoutes.GET(
+			"",
+			subscriptionHandler.GetSubscription,
+		)
+		subscriptionRoutes.POST(
+			"/upgrade",
+			subscriptionHandler.CreateUpgradeIntent,
+		)
+	}
 
 	{
 		linksRoutes.POST(
@@ -283,6 +384,11 @@ func main() {
 			linksHandler.GetLink,
 		)
 
+		linksRoutes.GET(
+			"/:id/analytics",
+			analyticsHandler.GetLinkAnalytics,
+		)
+
 		linksRoutes.DELETE(
 			"/:id",
 			linksHandler.DeleteLink,
@@ -295,9 +401,17 @@ func main() {
 	}
 
 	redirectService := &redirectpkg.Service{
-		Queries: queries,
-		Redis:   redisClient,
-		Clicks:  clicksService,
+		Queries:
+			queries,
+
+			Redis:
+				redisClient,
+
+			Clicks:
+				clicksService,
+
+			Analytics:
+				analyticsService,
 	}
 
 	redirectHandler := &redirectpkg.Handler{
@@ -338,6 +452,10 @@ func main() {
 		logger.Log.Info(
 			"server started",
 			zap.String(
+				"hostname",
+				hostname,
+			),
+			zap.String(
 				"port",
 				cfg.ServerPort,
 			),
@@ -373,13 +491,19 @@ func main() {
 
 	logger.Log.Info(
 		"shutdown signal received",
+		zap.String(
+			"instance",
+			hostname,
+		),
 	)
+
+	appCancel()
 
 	shutdownCtx,
 		cancel :=
 		context.WithTimeout(
 			context.Background(),
-			10*time.Second,
+			30*time.Second,
 		)
 
 	defer cancel()
@@ -395,6 +519,18 @@ func main() {
 		)
 	}
 
+	logger.Log.Info(
+		"waiting for workers to finish",
+		zap.String(
+			"instance",
+			hostname,
+		),
+	)
+
+	time.Sleep(
+		3 * time.Second,
+	)
+
 	pgPool.Close()
 
 	if err :=
@@ -408,5 +544,9 @@ func main() {
 
 	logger.Log.Info(
 		"server shutdown complete",
+		zap.String(
+			"instance",
+			hostname,
+		),
 	)
 }

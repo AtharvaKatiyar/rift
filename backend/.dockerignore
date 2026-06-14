@@ -1,0 +1,17 @@
+.git
+.gitignore
+
+tmp/
+logs/
+
+.env*
+!.env.example
+
+Dockerfile
+docker-compose.yml
+
+node_modules
+coverage
+
+*.md
+*.txt

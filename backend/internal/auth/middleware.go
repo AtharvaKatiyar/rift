@@ -9,41 +9,95 @@ func AuthMiddleware(
 	secret string,
 ) gin.HandlerFunc {
 
-	return func(c *gin.Context) {
+	return func(
+		c *gin.Context,
+	) {
 
 		tokenString, err :=
-			GetAccessCookie(c)
+			GetAccessCookie(
+				c,
+			)
 
 		if err != nil {
+
+			_, refreshErr :=
+				GetRefreshCookie(
+					c,
+				)
+
+			if refreshErr == nil {
+
+				c.JSON(
+					http.StatusUnauthorized,
+					gin.H{
+						"error":
+							"access token expired",
+
+						"requires_refresh":
+							true,
+					},
+				)
+
+				c.Abort()
+
+				return
+			}
 
 			c.JSON(
 				http.StatusUnauthorized,
 				gin.H{
 					"error":
-					"missing access token",
+						"unauthorized",
 				},
 			)
 
 			c.Abort()
+
 			return
 		}
 
-		claims, err := ValidateToken(
-			tokenString,
-			secret,
-			"access",
-		)
+		claims, err :=
+			ValidateToken(
+				tokenString,
+				secret,
+				"access",
+			)
 
 		if err != nil {
+
+			_, refreshErr :=
+				GetRefreshCookie(
+					c,
+				)
+
+			if refreshErr == nil {
+
+				c.JSON(
+					http.StatusUnauthorized,
+					gin.H{
+						"error":
+							"access token expired",
+
+						"requires_refresh":
+							true,
+					},
+				)
+
+				c.Abort()
+
+				return
+			}
 
 			c.JSON(
 				http.StatusUnauthorized,
 				gin.H{
-					"error": "invalid token",
+					"error":
+						"invalid token",
 				},
 			)
 
 			c.Abort()
+
 			return
 		}
 

@@ -2,6 +2,7 @@ package links
 
 import (
 	"net/http"
+	"strconv"
 	"github.com/gin-gonic/gin"
 )
 
@@ -112,11 +113,91 @@ func (h *Handler) GetUserLinks(
 		)
 		return
 	}
+	page := int32(1)
+	pageSize := int32(10)
 
-	links, err :=
+	if pageQuery :=
+		c.Query(
+			"page",
+		); pageQuery != "" {
+
+		parsedPage, err :=
+			strconv.Atoi(
+				pageQuery,
+			)
+
+		if err != nil ||
+			parsedPage < 1 {
+
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"error":
+						"invalid page",
+				},
+			)
+
+			return
+		}
+
+		page =
+			int32(
+				parsedPage,
+			)
+	}
+
+	if pageSizeQuery :=
+		c.Query(
+			"page_size",
+		); pageSizeQuery != "" {
+
+		parsedPageSize, err :=
+			strconv.Atoi(
+				pageSizeQuery,
+			)
+
+		if err != nil {
+
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"error":
+						"invalid page_size",
+				},
+			)
+
+			return
+		}
+
+		switch {
+
+		case parsedPageSize < 10:
+
+			parsedPageSize = 10
+
+		case parsedPageSize > 100:
+
+			parsedPageSize = 100
+
+		case parsedPageSize%10 != 0:
+
+			parsedPageSize =
+				((parsedPageSize / 10) + 1) * 10
+		}
+
+		pageSize =
+			int32(
+				parsedPageSize,
+			)
+	}
+
+
+	links, totalItems, correctPage, err :=
 		h.Service.GetUserLinks(
 			c.Request.Context(),
 			userIDStr,
+			page,
+			pageSize,
 		)
 
 	if err != nil {
@@ -130,10 +211,39 @@ func (h *Handler) GetUserLinks(
 		return
 	}
 
+	totalPages :=
+		(totalItems +
+			int64(pageSize) - 1) /
+			int64(pageSize)
+
 	c.JSON(
 		http.StatusOK,
+
 		gin.H{
-			"links": links,
+			"links":
+				links,
+
+			"pagination":
+				gin.H{
+					"page":
+						correctPage,
+
+					"page_size":
+						pageSize,
+
+					"total_items":
+						totalItems,
+
+					"total_pages":
+						totalPages,
+
+					"has_next":
+						correctPage <
+							int32(totalPages),
+
+					"has_previous":
+						correctPage > 1,
+				},
 		},
 	)
 }
