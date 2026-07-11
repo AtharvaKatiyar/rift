@@ -12,6 +12,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type PaymentProvider string
+
+const (
+	PaymentProviderDodo PaymentProvider = "dodo"
+)
+
+func (e *PaymentProvider) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentProvider(s)
+	case string:
+		*e = PaymentProvider(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentProvider: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentProvider struct {
+	PaymentProvider PaymentProvider
+	Valid           bool // Valid is true if PaymentProvider is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentProvider) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentProvider, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentProvider.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentProvider) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentProvider), nil
+}
+
 type SubscriptionPlan string
 
 const (
@@ -100,6 +141,50 @@ func (ns NullSubscriptionStatus) Value() (driver.Value, error) {
 	return string(ns.SubscriptionStatus), nil
 }
 
+type WebhookProcessingStatus string
+
+const (
+	WebhookProcessingStatusPending    WebhookProcessingStatus = "pending"
+	WebhookProcessingStatusProcessing WebhookProcessingStatus = "processing"
+	WebhookProcessingStatusProcessed  WebhookProcessingStatus = "processed"
+	WebhookProcessingStatusFailed     WebhookProcessingStatus = "failed"
+)
+
+func (e *WebhookProcessingStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WebhookProcessingStatus(s)
+	case string:
+		*e = WebhookProcessingStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WebhookProcessingStatus: %T", src)
+	}
+	return nil
+}
+
+type NullWebhookProcessingStatus struct {
+	WebhookProcessingStatus WebhookProcessingStatus
+	Valid                   bool // Valid is true if WebhookProcessingStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWebhookProcessingStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.WebhookProcessingStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WebhookProcessingStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWebhookProcessingStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WebhookProcessingStatus), nil
+}
+
 type CentralLink struct {
 	ID         pgtype.UUID
 	UserID     pgtype.UUID
@@ -112,7 +197,7 @@ type CentralLink struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	IsDeleted  pgtype.Bool
-	DeletedAt  pgtype.Timestamp
+	DeletedAt  pgtype.Timestamptz
 }
 
 type LinkAnalytic struct {
@@ -142,17 +227,31 @@ type LinkHistory struct {
 	ChangedAt    pgtype.Timestamptz
 }
 
-type PaymentEvent struct {
+type PaymentIntent struct {
 	ID              pgtype.UUID
 	ProviderEventID string
-	ProviderName    string
+	Provider        PaymentProvider
 	EventType       string
 	Processed       bool
 	Payload         []byte
 	CreatedAt       pgtype.Timestamptz
 	UserID          pgtype.UUID
-	Plan            pgtype.Text
+	Plan            NullSubscriptionPlan
 	IdempotencyKey  pgtype.Text
+}
+
+type PaymentWebhook struct {
+	ID                 pgtype.UUID
+	Provider           PaymentProvider
+	ProviderEventID    string
+	EventType          string
+	Headers            []byte
+	Payload            []byte
+	ProcessingStatus   WebhookProcessingStatus
+	ProcessingAttempts int32
+	LastError          pgtype.Text
+	ReceivedAt         pgtype.Timestamptz
+	ProcessedAt        pgtype.Timestamptz
 }
 
 type RefreshToken struct {
@@ -174,7 +273,6 @@ type User struct {
 	PasswordHash   pgtype.Text
 	GoogleID       pgtype.Text
 	ProfilePicture pgtype.Text
-	Plan           string
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
 }

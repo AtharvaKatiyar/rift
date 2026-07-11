@@ -2,14 +2,18 @@ package subscription
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"errors"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 )
 
 type Service struct {
 	Queries *db.Queries
+	DB      *pgxpool.Pool
+	PaymentProvider PaymentProvider
 }
 
 func (
@@ -60,16 +64,23 @@ func (
 		)
 
 	remaining :=
-		plan.Limit -
-			linksUsed
-
-	if remaining < 0 {
-		remaining = 0
-	}
+		max(
+			int64(0),
+			plan.Limit-linksUsed,
+		)
 
 	canCreate :=
 		linksUsed <
 			plan.Limit
+
+	usagePercent := int64(0)
+
+	if plan.Limit > 0 {
+
+		usagePercent =
+			(linksUsed * 100) /
+				plan.Limit
+	}
 
 	return &SubscriptionResponse{
 		Plan:
@@ -80,6 +91,9 @@ func (
 				subscription.Status,
 			),
 
+		Price:
+			plan.Price,
+
 		LinkLimit:
 			plan.Limit,
 
@@ -89,6 +103,9 @@ func (
 		LinksRemaining:
 			remaining,
 
+		UsagePercent: 
+			usagePercent,
+
 		CanCreateLinks:
 			canCreate,
 
@@ -96,6 +113,9 @@ func (
 			GetAllowedUpgrades(
 				plan.Name,
 			),
+
+		Features: 
+			plan.Features,
 	}, nil
 }
 
@@ -147,9 +167,7 @@ func (
 		targetPlan,
 	) {
 
-		return errors.New(
-			"invalid upgrade path",
-		)
+		return ErrInvalidUpgradePath
 	}
 
 	return nil
@@ -206,9 +224,7 @@ func (
 	) {
 
 		return nil,
-			errors.New(
-				"invalid upgrade path",
-			)
+			ErrInvalidUpgradePath
 	}
 
 	idempotencyKey :=
@@ -217,78 +233,78 @@ func (
 			userID,
 			targetPlan,
 		)
-
-	existing, err :=
-		s.Queries.
-			GetPaymentIntentByIdempotency(
-				ctx,
-				pgtype.Text{String: idempotencyKey, Valid: true},
-			)
-
-	if err == nil &&
-		!existing.Processed {
-
-		plan :=
-			GetPlan(
-				targetPlan,
-			)
-
-		return &CheckoutResponse{
-			CheckoutID:
-				existing.
-					ProviderEventID,
-
-			Plan:
-				targetPlan,
-
-			Price:
-				plan.Price,
-
-			Message:
-				"existing checkout found",
-		}, nil
-	}
-
 	plan :=
 		GetPlan(
 			targetPlan,
 		)
-
-	checkoutID :=
-		GenerateCheckoutID()
-
-	_, err =
-		s.Queries.
-			CreatePaymentIntent(
+	
+	checkoutSession,
+		err :=
+		s.PaymentProvider.
+			CreateCheckout(
 				ctx,
-				db.CreatePaymentIntentParams{
-					ProviderEventID:
-						checkoutID,
+				userID,
+				targetPlan,
+			)
 
-					ProviderName:
-						"internal",
+	// if err != nil {
+	// 	return nil, err
+	// }
+	if err != nil {
+		return nil,
+			fmt.Errorf(
+				"dodo checkout failed: %w",
+				err,
+			)
+	}
+
+	paymentIntent, err :=
+		s.Queries.
+			CreateOrGetPaymentIntent(
+				ctx,
+				db.CreateOrGetPaymentIntentParams{
+					ProviderEventID:
+						checkoutSession.CheckoutID,
+
+					Provider:
+						db.PaymentProviderDodo,
 
 					EventType:
-						"checkout_created",
+						EventCheckoutCreated,
 
 					UserID:
 						pgUserID,
 
-					Plan:
-						targetPlan,
+					Plan: db.NullSubscriptionPlan{
+						SubscriptionPlan: db.SubscriptionPlan(targetPlan),
+						Valid: true,
+					},
 
 					IdempotencyKey:
-						idempotencyKey,
+						pgtype.Text{
+							String: idempotencyKey,
+							Valid: true,
+						},
 				},
 			)
 
+	// if err != nil {
+	// 	return nil, err
+	// }
 	if err != nil {
-		return nil, err
+		return nil,
+			fmt.Errorf(
+				"create payment intent failed: %w",
+				err,
+			)
 	}
 
 	return &CheckoutResponse{
 		CheckoutID:
-			checkoutID,
+			paymentIntent.ProviderEventID,
+
+		CheckoutURL:
+			checkoutSession.CheckoutURL,
 
 		Plan:
 			targetPlan,
@@ -299,4 +315,201 @@ func (
 		Message:
 			"checkout created",
 	}, nil
+}
+
+func (
+	s *Service,
+) CompleteCheckout(
+	ctx context.Context,
+	userID string,
+	checkoutID string,
+) error {
+	pgUserID, err :=
+		parseUUID(
+			userID,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	tx, err :=
+		s.DB.BeginTx(
+			ctx,
+			pgx.TxOptions{},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	committed := false
+
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+	txQueries :=
+		s.Queries.WithTx(
+			tx,
+		)
+
+	payment, err :=
+		txQueries.
+			CompletePaymentIntent(
+				ctx,
+				db.CompletePaymentIntentParams{
+					ProviderEventID:
+						checkoutID,
+
+					UserID:
+						pgUserID,
+				},
+			)
+
+	if err != nil {
+
+		if errors.Is(
+			err,
+			pgx.ErrNoRows,
+		) {
+
+			return nil
+		}
+
+		return err
+	}
+
+	if !payment.Plan.Valid {
+		return ErrInvalidPaymentPlan
+	}
+
+	plan :=
+		db.SubscriptionPlan(
+			string(payment.Plan.SubscriptionPlan),
+		)
+
+	switch plan {
+
+	case db.SubscriptionPlanStarter,
+		db.SubscriptionPlanPro:
+
+	default:
+		return ErrInvalidPaymentPlan
+	}
+
+	_, err =
+		txQueries.
+			UpdateUserPlan(
+				ctx,
+				db.UpdateUserPlanParams{
+					UserID:
+						payment.UserID,
+
+					Plan:
+						plan,
+				},
+			)
+	if err != nil {
+		return err
+	}
+	err =
+	tx.Commit(
+		ctx,
+	)
+	
+	if err != nil {
+		return err
+	}
+	committed = true
+
+	return nil
+}
+
+func (
+	s *Service,
+) GetCheckoutStatus(
+	ctx context.Context,
+	userID string,
+	checkoutID string,
+) (
+	*PaymentStatusResponse,
+	error,
+) {
+	pgUserID, err :=
+		parseUUID(
+			userID,
+		)
+
+	if err != nil {
+		return nil, err
+	}
+	payment, err :=
+		s.Queries.
+			GetUserPaymentIntentByCheckoutID(
+				ctx,
+				db.GetUserPaymentIntentByCheckoutIDParams{
+					ProviderEventID:
+						checkoutID,
+
+					UserID:
+						pgUserID,
+				},
+			)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &PaymentStatusResponse{
+		CheckoutID:
+			payment.ProviderEventID,
+
+		Plan:
+			string(payment.Plan.SubscriptionPlan),
+
+		Processed:
+			payment.Processed,
+	}, nil
+}
+
+func (
+	s *Service,
+) GetPlans() *PlansResponse {
+
+	return &PlansResponse{
+		Plans: []PlanResponse{
+			{
+				Name:
+					PlanFree,
+
+				Price:
+					PriceFree,
+
+				LinkLimit:
+					FreePlanLimit,
+			},
+			{
+				Name:
+					PlanStarter,
+
+				Price:
+					PriceStarter,
+
+				LinkLimit:
+					StarterPlanLimit,
+			},
+			{
+				Name:
+					PlanPro,
+
+				Price:
+					PricePro,
+
+				LinkLimit:
+					ProPlanLimit,
+			},
+		},
+	}
 }

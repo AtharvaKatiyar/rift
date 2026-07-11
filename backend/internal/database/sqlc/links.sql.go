@@ -255,7 +255,7 @@ type GetLinkForRedirectRow struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	IsDeleted  pgtype.Bool
-	DeletedAt  pgtype.Timestamp
+	DeletedAt  pgtype.Timestamptz
 	Username   string
 }
 

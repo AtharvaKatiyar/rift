@@ -88,7 +88,7 @@ func (s *Service) validateLinkCreation(
 	userID pgtype.UUID,
 	slug string,
 	plan string,
-) (*db.User, error) {
+) (string, error) {
 
 	userCtx, cancel :=
 		dbTimeoutContext(ctx)
@@ -101,7 +101,7 @@ func (s *Service) validateLinkCreation(
 		userID,
 	)
 	if err != nil {
-		return nil, errors.New("user not found")
+		return "", errors.New("user not found")
 	}
 
 	countCtx, cancel :=
@@ -114,7 +114,7 @@ func (s *Service) validateLinkCreation(
 		userID,
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	planLimit :=
@@ -124,7 +124,7 @@ func (s *Service) validateLinkCreation(
 
 	if count >= planLimit {
 
-		return nil,
+		return "",
 			errors.New(
 				"plan limit reached",
 			)
@@ -136,10 +136,10 @@ func (s *Service) validateLinkCreation(
 		slug,
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &user, nil
+	return user.Username, nil
 }
 
 func (s *Service) ensureSlugAvailable(
@@ -256,7 +256,7 @@ func (s *Service) CreateLink(
 			err
 	}
 
-	user, err := s.validateLinkCreation(
+	username, err := s.validateLinkCreation(
 		ctx,
 		pgUserID,
 		req.Slug,
@@ -293,7 +293,7 @@ func (s *Service) CreateLink(
 	}
 
 	publicURL := s.buildPublicURL(
-		user.Username,
+		username,
 		req.Slug,
 		publicKey,
 	)

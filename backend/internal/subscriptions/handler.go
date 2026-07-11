@@ -2,7 +2,8 @@ package subscription
 
 import (
 	"net/http"
-
+	"errors"
+	"github.com/jackc/pgx/v5"
 	"github.com/gin-gonic/gin"
 )
 
@@ -99,8 +100,21 @@ func (
 		return
 	}
 
-	userIDStr :=
+	userIDStr, ok :=
 		userID.(string)
+
+	if !ok {
+
+		c.JSON(
+			http.StatusUnauthorized,
+			gin.H{
+				"error":
+					"invalid auth context",
+			},
+		)
+
+		return
+	}
 
 	var req UpgradeRequest
 
@@ -130,13 +144,44 @@ func (
 
 	if err != nil {
 
-		c.JSON(
-			http.StatusBadRequest,
-			gin.H{
-				"error":
-					err.Error(),
-			},
-		)
+		switch {
+
+		case errors.Is(
+			err,
+			ErrInvalidPlan,
+		):
+
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"error":
+						"invalid plan",
+				},
+			)
+
+		case errors.Is(
+			err,
+			ErrInvalidUpgradePath,
+		):
+
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"error":
+						"invalid upgrade path",
+				},
+			)
+
+		default:
+
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{
+					"error":
+						err.Error(),
+				},
+			)
+		}
 
 		return
 	}
@@ -174,8 +219,21 @@ func (
 		return
 	}
 
-	userIDStr :=
+	userIDStr, ok :=
 		userID.(string)
+
+	if !ok {
+
+		c.JSON(
+			http.StatusUnauthorized,
+			gin.H{
+				"error":
+					"invalid auth context",
+			},
+		)
+
+		return
+	}
 
 	var req CheckoutRequest
 
@@ -205,11 +263,130 @@ func (
 
 	if err != nil {
 
+		switch {
+
+		case errors.Is(
+			err,
+			ErrInvalidPlan,
+		):
+
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"error":
+						"invalid plan",
+				},
+			)
+
+		case errors.Is(
+			err,
+			ErrInvalidUpgradePath,
+		):
+
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"error":
+						"invalid upgrade path",
+				},
+			)
+
+		default:
+
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{
+					"error":
+						err.Error(),
+				},
+			)
+		}
+
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		response,
+	)
+}
+
+func (
+	h *Handler,
+) GetCheckoutStatus(
+	c *gin.Context,
+) {
+
+	userID, exists :=
+		c.Get(
+			"user_id",
+		)
+
+	if !exists {
+
 		c.JSON(
-			http.StatusBadRequest,
+			http.StatusUnauthorized,
 			gin.H{
 				"error":
-					err.Error(),
+					"unauthorized",
+			},
+		)
+
+		return
+	}
+
+	userIDStr, ok :=
+		userID.(string)
+
+	if !ok {
+
+		c.JSON(
+			http.StatusUnauthorized,
+			gin.H{
+				"error":
+					"invalid auth context",
+			},
+		)
+
+		return
+	}
+
+	checkoutID :=
+		c.Param(
+			"checkout_id",
+		)
+
+	response, err :=
+		h.Service.
+			GetCheckoutStatus(
+				c.Request.Context(),
+				userIDStr,
+				checkoutID,
+			)
+
+	if err != nil {
+
+		if errors.Is(
+			err,
+			pgx.ErrNoRows,
+		) {
+
+			c.JSON(
+				http.StatusNotFound,
+				gin.H{
+					"error":
+						"checkout not found",
+				},
+			)
+
+			return
+		}
+
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"error":
+					"internal server error",
 			},
 		)
 
@@ -219,5 +396,133 @@ func (
 	c.JSON(
 		http.StatusOK,
 		response,
+	)
+}
+
+// func (
+// 	h *Handler,
+// ) CompleteCheckout(
+// 	c *gin.Context,
+// ) {
+// 	userID, exists :=
+// 		c.Get(
+// 			"user_id",
+// 		)
+
+// 	if !exists {
+
+// 		c.JSON(
+// 			http.StatusUnauthorized,
+// 			gin.H{
+// 				"error":
+// 					"unauthorized",
+// 			},
+// 		)
+
+// 		return
+// 	}
+
+// 	userIDStr, ok :=
+// 		userID.(string)
+
+// 	if !ok {
+
+// 		c.JSON(
+// 			http.StatusUnauthorized,
+// 			gin.H{
+// 				"error":
+// 					"invalid auth context",
+// 			},
+// 		)
+
+// 		return
+// 	}
+// 	var req CompleteCheckoutRequest
+
+// 	if err :=
+// 		c.ShouldBindJSON(
+// 			&req,
+// 		); err != nil {
+
+// 		c.JSON(
+// 			http.StatusBadRequest,
+// 			gin.H{
+// 				"error":
+// 					"invalid request",
+// 			},
+// 		)
+
+// 		return
+// 	}
+
+// 	err :=
+// 		h.Service.CompleteCheckout(
+// 			c.Request.Context(),
+// 			userIDStr,
+// 			req.CheckoutID,
+// 		)
+
+// 	if err != nil {
+
+// 		switch {
+
+// 		case errors.Is(
+// 			err,
+// 			pgx.ErrNoRows,
+// 		):
+
+// 			c.JSON(
+// 				http.StatusNotFound,
+// 				gin.H{
+// 					"error":
+// 						"checkout not found",
+// 				},
+// 			)
+
+// 		case errors.Is(
+// 			err,
+// 			ErrInvalidPaymentPlan,
+// 			):
+
+// 			c.JSON(
+// 				http.StatusBadRequest,
+// 				gin.H{
+// 					"error":
+// 						"invalid payment plan",
+// 				},
+// 			)
+
+// 		default:
+
+// 			c.JSON(
+// 				http.StatusInternalServerError,
+// 				gin.H{
+// 					"error":
+// 						"internal server error",
+// 				},
+// 			)
+// 		}
+
+// 		return
+// 	}
+
+// 	c.JSON(
+// 		http.StatusOK,
+// 		gin.H{
+// 			"message":
+// 				"checkout completed",
+// 		},
+// 	)
+// }
+
+func (
+	h *Handler,
+) GetPlans(
+	c *gin.Context,
+) {
+
+	c.JSON(
+		http.StatusOK,
+		h.Service.GetPlans(),
 	)
 }

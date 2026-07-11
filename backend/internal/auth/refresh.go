@@ -142,7 +142,10 @@ func (s *Service) RefreshSession(
 		s.createSession(
 			refreshCtx,
 			qtx,
-			user,
+			SessionUser{
+				ID: user.ID,
+				Email: user.Email,
+			},
 			userAgent,
 			ipAddress,
 		)

@@ -6,15 +6,15 @@ func GetAllowedUpgrades(
 
 	switch current {
 
-	case "free":
+	case PlanFree:
 		return []string{
-			"starter",
-			"pro",
+			PlanStarter,
+			PlanPro,
 		}
 
-	case "starter":
+	case PlanStarter:
 		return []string{
-			"pro",
+			PlanPro,
 		}
 
 	default:
@@ -28,9 +28,9 @@ func CanUpgrade(
 ) bool {
 
 	rank := map[string]int{
-		"free":    1,
-		"starter": 2,
-		"pro":     3,
+		PlanFree:    1,
+		PlanStarter: 2,
+		PlanPro:     3,
 	}
 
 	return rank[target] >

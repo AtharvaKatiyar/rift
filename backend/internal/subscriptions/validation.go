@@ -1,21 +1,17 @@
 package subscription
 
-import "errors"
-
 func ValidateUpgradePlan(
 	plan string,
 ) error {
 
 	switch plan {
 
-	case "starter",
-		"pro":
+	case PlanStarter,
+		PlanPro:
 
 		return nil
 
 	default:
-		return errors.New(
-			"invalid plan",
-		)
+		return ErrInvalidPlan
 	}
 }

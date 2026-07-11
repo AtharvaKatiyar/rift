@@ -20,7 +20,6 @@ FROM user_subscriptions
 WHERE user_id = $1
 LIMIT 1;
 
-
 -- name: UpdateUserSubscription :one
 UPDATE user_subscriptions
 SET
@@ -110,10 +109,16 @@ FROM central_links
 WHERE user_id = $1
 AND is_deleted = FALSE;
 
--- name: CreatePaymentIntent :one
-INSERT INTO payment_events (
+-- name: MarkPaymentProcessed :exec
+UPDATE payment_intents
+SET
+    processed = TRUE
+WHERE provider_event_id = $1;
+
+-- name: CreateOrGetPaymentIntent :one
+INSERT INTO payment_intents (
     provider_event_id,
-    provider_name,
+    provider,
     event_type,
     user_id,
     plan,
@@ -129,19 +134,33 @@ VALUES (
     $6,
     FALSE
 )
+ON CONFLICT (idempotency_key)
+DO UPDATE
+SET idempotency_key = payment_intents.idempotency_key
 RETURNING *;
 
+-- name: CompletePaymentIntent :one
+UPDATE payment_intents
+SET
+    processed = TRUE
+WHERE
+    provider_event_id = $1
+    AND user_id = $2
+    AND processed = FALSE
+RETURNING *;
 
--- name: GetPaymentIntentByIdempotency :one
+-- name: GetUserPaymentIntentByCheckoutID :one
 SELECT *
-FROM payment_events
-WHERE idempotency_key = $1
+FROM payment_intents
+WHERE
+    provider_event_id = $1
+    AND user_id = $2
 LIMIT 1;
 
-
--- name: MarkPaymentProcessed :exec
-UPDATE payment_events
+-- name: UpdateUserPlan :one
+UPDATE user_subscriptions
 SET
-    processed = TRUE,
+    plan = $2,
     updated_at = NOW()
-WHERE provider_event_id = $1;
+WHERE user_id = $1
+RETURNING *;

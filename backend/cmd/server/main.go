@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"context"
 	"net/http"
-	"time"
+	"time"         
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
@@ -20,6 +20,8 @@ import (
 	"github.com/AtharvaKatiyar/rift/internal/metrics"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
 	"github.com/AtharvaKatiyar/rift/internal/geoip"
+	"github.com/dodopayments/dodopayments-go/option"
+	dodopayments "github.com/dodopayments/dodopayments-go"
 	authpkg "github.com/AtharvaKatiyar/rift/internal/auth"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	linkspkg "github.com/AtharvaKatiyar/rift/internal/links"
@@ -163,10 +165,57 @@ func main() {
 		IsProduction: isProduction,
 	}
 
+	// client :=
+	// 	dodopayments.NewClient(
+	// 		option.WithBearerToken(
+	// 			cfg.DodoAPIKey,
+	// 		),
+	// 	)
+
+	opts := []option.RequestOption{
+		option.WithBearerToken(
+			cfg.DodoAPIKey,
+		),
+	}
+
+	if cfg.DodoEnvironment == "test" {
+		opts = append(
+			opts,
+			option.WithEnvironmentTestMode(),
+		)
+	} else {
+		opts = append(
+			opts,
+			option.WithEnvironmentLiveMode(),
+		)
+	}
+
+	client := dodopayments.NewClient(
+		opts...,
+	)
+
+	dodoProvider :=
+		&subscriptionpkg.DodoProvider{
+			Client: client,
+
+			StarterProductID:
+				cfg.DodoStarterProductID,
+
+			ProProductID:
+				cfg.DodoProProductID,
+
+			SuccessURL:
+				cfg.DodoSuccessURL,
+
+			WebhookSecret:
+				cfg.DodoWebhookSecret,
+		}
+
 	subscriptionService :=
 		&subscriptionpkg.Service{
-			Queries:
-				queries,
+			Queries: queries,
+			DB:      pgPool,
+			PaymentProvider: dodoProvider,
 		}
 
 	subscriptionHandler :=
@@ -345,6 +394,23 @@ func main() {
 			cfg.JWTSecret,
 		),
 	)
+
+	publicSubscriptionRoutes := api.Group(
+		"/subscription",
+	)
+	{
+		publicSubscriptionRoutes.GET(
+			"/plans",
+			subscriptionHandler.GetPlans,
+		)
+
+		publicSubscriptionRoutes.POST(
+			"/webhook/dodo",
+			subscriptionHandler.DodoWebhook,
+		)
+
+	}
+
 	subscriptionRoutes := api.Group(
 		"/subscription",
 		authpkg.AuthMiddleware(
@@ -360,6 +426,18 @@ func main() {
 		subscriptionRoutes.POST(
 			"/upgrade",
 			subscriptionHandler.CreateUpgradeIntent,
+		)
+		subscriptionRoutes.POST(
+			"/checkout",
+			subscriptionHandler.CreateCheckout,
+		)
+		// subscriptionRoutes.POST(
+		// 	"/complete",
+		// 	subscriptionHandler.CompleteCheckout,
+		// )
+		subscriptionRoutes.GET(
+			"/payment/:checkout_id",
+			subscriptionHandler.GetCheckoutStatus,
 		)
 	}
 

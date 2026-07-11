@@ -9,10 +9,15 @@ import (
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 )
 
+type SessionUser struct {
+	ID pgtype.UUID
+	Email string
+}
+
 func (s *Service) createSession(
 	ctx context.Context,
 	q *db.Queries,
-	user db.User,
+	user SessionUser,
 	userAgent string,
 	ipAddress string,
 ) (string, string, error) {

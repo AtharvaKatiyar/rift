@@ -22,7 +22,14 @@ INSERT INTO users (
 VALUES (
     $1, $2, $3, $4, $5
 )
-RETURNING id, email, username, password_hash, google_id, profile_picture, plan, created_at, updated_at
+RETURNING id,
+    email,
+    username,
+    password_hash,
+    google_id,
+    profile_picture,
+    created_at,
+    updated_at
 `
 
 type CreateUserParams struct {
@@ -49,7 +56,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
-		&i.Plan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -57,7 +63,14 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, username, password_hash, google_id, profile_picture, plan, created_at, updated_at
+SELECT id,
+    email,
+    username,
+    password_hash,
+    google_id,
+    profile_picture,
+    created_at,
+    updated_at
 FROM users
 WHERE email = $1
 `
@@ -72,7 +85,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
-		&i.Plan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -80,7 +92,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByGoogleID = `-- name: GetUserByGoogleID :one
-SELECT id, email, username, password_hash, google_id, profile_picture, plan, created_at, updated_at
+SELECT id,
+    email,
+    username,
+    password_hash,
+    google_id,
+    profile_picture,
+    created_at,
+    updated_at
 FROM users
 WHERE google_id = $1
 `
@@ -95,7 +114,6 @@ func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID pgtype.Text) (
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
-		&i.Plan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -103,7 +121,14 @@ func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID pgtype.Text) (
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, username, password_hash, google_id, profile_picture, plan, created_at, updated_at
+SELECT id,
+    email,
+    username,
+    password_hash,
+    google_id,
+    profile_picture,
+    created_at,
+    updated_at
 FROM users
 WHERE id = $1
 `
@@ -118,7 +143,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
-		&i.Plan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -126,7 +150,14 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, email, username, password_hash, google_id, profile_picture, plan, created_at, updated_at
+SELECT id,
+    email,
+    username,
+    password_hash,
+    google_id,
+    profile_picture,
+    created_at,
+    updated_at
 FROM users
 WHERE username = $1
 `
@@ -141,7 +172,6 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
-		&i.Plan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

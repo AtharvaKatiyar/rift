@@ -1,0 +1,4 @@
+ALTER TABLE payment_events
+ALTER COLUMN plan
+TYPE TEXT
+USING plan::TEXT;

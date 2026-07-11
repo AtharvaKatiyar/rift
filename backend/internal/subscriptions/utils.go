@@ -22,7 +22,8 @@ func parseUUID(
 	if err != nil {
 		return pgtype.UUID{},
 			fmt.Errorf(
-				"invalid uuid: %w",
+				"%w: %v",
+				ErrInvalidUUID,
 				err,
 			)
 	}

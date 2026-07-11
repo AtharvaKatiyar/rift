@@ -1,0 +1,4 @@
+ALTER TABLE central_links
+ALTER COLUMN deleted_at
+TYPE TIMESTAMPTZ
+USING deleted_at AT TIME ZONE 'UTC';

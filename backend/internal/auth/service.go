@@ -191,7 +191,10 @@ func (s *Service) Register(
 	return s.createSession(
 		sessionCtx,
 		s.Queries,
-		user,
+		SessionUser{
+			ID: user.ID,
+			Email: user.Email,
+		},
 		userAgent,
 		ipAddress,
 
@@ -252,7 +255,10 @@ func (s *Service) Login(
 	return s.createSession(
 		sessionCtx,
 		s.Queries,
-		user,
+		SessionUser{
+			ID: user.ID,
+			Email: user.Email,
+		},
 		userAgent,
 		ipAddress,
 

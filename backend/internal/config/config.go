@@ -23,6 +23,12 @@ type Config struct {
 	FrontendURL		 string
 	EnableWorkers	 bool
 	AppEnv			 string
+	DodoEnvironment  string
+	DodoAPIKey			 string
+	DodoWebhookSecret	 string
+	DodoStarterProductID string
+	DodoProProductID	 string
+	DodoSuccessURL		 string
 }
 
 func LoadConfig() *Config {
@@ -69,21 +75,27 @@ func LoadConfig() *Config {
 		}
 	}
 	return &Config{
-		PostgresUser:     MustGetEnv("POSTGRES_USER"),
-		PostgresPassword: MustGetEnv("POSTGRES_PASSWORD"),
-		PostgresDB:       MustGetEnv("POSTGRES_DB"),
-		PostgresPort:     MustGetEnv("POSTGRES_PORT"),
-		PostgresSSLMode:  MustGetEnv("POSTGRES_SSLMODE"),
-		PostgresHost:     MustGetEnv("POSTGRES_HOST"),
-		ServerPort:       MustGetEnv("PORT"),
-		RedisPort:        MustGetEnv("REDIS_PORT"),
-		RedisHost:        MustGetEnv("REDIS_HOST"),
-		RedisPassword:    MustGetEnv("REDIS_PASSWORD"),
-		JWTSecret:        MustGetEnv("JWT_SECRET"),
-		JWTExpiration:    MustGetEnv("JWT_EXPIRATION"),
-		BaseURL:          MustGetEnv("BASE_URL"),
-		FrontendURL:      MustGetEnv("FRONTEND_URL"),
-		EnableWorkers:    MustGetEnv("ENABLE_WORKERS") == "true",
-		AppEnv:           env,
+		PostgresUser:    	 	MustGetEnv("POSTGRES_USER"),
+		PostgresPassword: 		MustGetEnv("POSTGRES_PASSWORD"),
+		PostgresDB:       		MustGetEnv("POSTGRES_DB"),
+		PostgresPort:     		MustGetEnv("POSTGRES_PORT"),
+		PostgresSSLMode:  		MustGetEnv("POSTGRES_SSLMODE"),
+		PostgresHost:     		MustGetEnv("POSTGRES_HOST"),
+		ServerPort:       		MustGetEnv("PORT"),
+		RedisPort:        		MustGetEnv("REDIS_PORT"),
+		RedisHost:        		MustGetEnv("REDIS_HOST"),
+		RedisPassword:    		MustGetEnv("REDIS_PASSWORD"),
+		JWTSecret:        		MustGetEnv("JWT_SECRET"),
+		JWTExpiration:    		MustGetEnv("JWT_EXPIRATION"),
+		BaseURL:          		MustGetEnv("BASE_URL"),
+		FrontendURL:      		MustGetEnv("FRONTEND_URL"),
+		EnableWorkers:    		MustGetEnv("ENABLE_WORKERS") == "true",
+		DodoEnvironment: 		MustGetEnv("DODO_ENVIRONMENT"),
+		DodoAPIKey:       		MustGetEnv("DODO_API_KEY"),
+		DodoWebhookSecret: 		MustGetEnv("DODO_WEBHOOK_SECRET"),
+		DodoStarterProductID: 	MustGetEnv("DODO_STARTER_PRODUCT_ID"),
+		DodoProProductID:     	MustGetEnv("DODO_PRO_PRODUCT_ID"),
+		DodoSuccessURL:       	MustGetEnv("DODO_SUCCESS_URL"),
+		AppEnv:           		env,
 	}
 }

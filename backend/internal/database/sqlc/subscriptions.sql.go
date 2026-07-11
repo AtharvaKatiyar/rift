@@ -11,6 +11,40 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const completePaymentIntent = `-- name: CompletePaymentIntent :one
+UPDATE payment_intents
+SET
+    processed = TRUE
+WHERE
+    provider_event_id = $1
+    AND user_id = $2
+    AND processed = FALSE
+RETURNING id, provider_event_id, provider, event_type, processed, payload, created_at, user_id, plan, idempotency_key
+`
+
+type CompletePaymentIntentParams struct {
+	ProviderEventID string
+	UserID          pgtype.UUID
+}
+
+func (q *Queries) CompletePaymentIntent(ctx context.Context, arg CompletePaymentIntentParams) (PaymentIntent, error) {
+	row := q.db.QueryRow(ctx, completePaymentIntent, arg.ProviderEventID, arg.UserID)
+	var i PaymentIntent
+	err := row.Scan(
+		&i.ID,
+		&i.ProviderEventID,
+		&i.Provider,
+		&i.EventType,
+		&i.Processed,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.UserID,
+		&i.Plan,
+		&i.IdempotencyKey,
+	)
+	return i, err
+}
+
 const countUserLinksForSubscription = `-- name: CountUserLinksForSubscription :one
 SELECT COUNT(*)
 FROM central_links
@@ -25,10 +59,10 @@ func (q *Queries) CountUserLinksForSubscription(ctx context.Context, userID pgty
 	return count, err
 }
 
-const createPaymentIntent = `-- name: CreatePaymentIntent :one
-INSERT INTO payment_events (
+const createOrGetPaymentIntent = `-- name: CreateOrGetPaymentIntent :one
+INSERT INTO payment_intents (
     provider_event_id,
-    provider_name,
+    provider,
     event_type,
     user_id,
     plan,
@@ -44,32 +78,35 @@ VALUES (
     $6,
     FALSE
 )
-RETURNING id, provider_event_id, provider_name, event_type, processed, payload, created_at, user_id, plan, idempotency_key
+ON CONFLICT (idempotency_key)
+DO UPDATE
+SET idempotency_key = payment_intents.idempotency_key
+RETURNING id, provider_event_id, provider, event_type, processed, payload, created_at, user_id, plan, idempotency_key
 `
 
-type CreatePaymentIntentParams struct {
+type CreateOrGetPaymentIntentParams struct {
 	ProviderEventID string
-	ProviderName    string
+	Provider        PaymentProvider
 	EventType       string
 	UserID          pgtype.UUID
-	Plan            pgtype.Text
+	Plan            NullSubscriptionPlan
 	IdempotencyKey  pgtype.Text
 }
 
-func (q *Queries) CreatePaymentIntent(ctx context.Context, arg CreatePaymentIntentParams) (PaymentEvent, error) {
-	row := q.db.QueryRow(ctx, createPaymentIntent,
+func (q *Queries) CreateOrGetPaymentIntent(ctx context.Context, arg CreateOrGetPaymentIntentParams) (PaymentIntent, error) {
+	row := q.db.QueryRow(ctx, createOrGetPaymentIntent,
 		arg.ProviderEventID,
-		arg.ProviderName,
+		arg.Provider,
 		arg.EventType,
 		arg.UserID,
 		arg.Plan,
 		arg.IdempotencyKey,
 	)
-	var i PaymentEvent
+	var i PaymentIntent
 	err := row.Scan(
 		&i.ID,
 		&i.ProviderEventID,
-		&i.ProviderName,
+		&i.Provider,
 		&i.EventType,
 		&i.Processed,
 		&i.Payload,
@@ -117,20 +154,27 @@ func (q *Queries) CreateUserSubscription(ctx context.Context, userID pgtype.UUID
 	return i, err
 }
 
-const getPaymentIntentByIdempotency = `-- name: GetPaymentIntentByIdempotency :one
-SELECT id, provider_event_id, provider_name, event_type, processed, payload, created_at, user_id, plan, idempotency_key
-FROM payment_events
-WHERE idempotency_key = $1
+const getUserPaymentIntentByCheckoutID = `-- name: GetUserPaymentIntentByCheckoutID :one
+SELECT id, provider_event_id, provider, event_type, processed, payload, created_at, user_id, plan, idempotency_key
+FROM payment_intents
+WHERE
+    provider_event_id = $1
+    AND user_id = $2
 LIMIT 1
 `
 
-func (q *Queries) GetPaymentIntentByIdempotency(ctx context.Context, idempotencyKey pgtype.Text) (PaymentEvent, error) {
-	row := q.db.QueryRow(ctx, getPaymentIntentByIdempotency, idempotencyKey)
-	var i PaymentEvent
+type GetUserPaymentIntentByCheckoutIDParams struct {
+	ProviderEventID string
+	UserID          pgtype.UUID
+}
+
+func (q *Queries) GetUserPaymentIntentByCheckoutID(ctx context.Context, arg GetUserPaymentIntentByCheckoutIDParams) (PaymentIntent, error) {
+	row := q.db.QueryRow(ctx, getUserPaymentIntentByCheckoutID, arg.ProviderEventID, arg.UserID)
+	var i PaymentIntent
 	err := row.Scan(
 		&i.ID,
 		&i.ProviderEventID,
-		&i.ProviderName,
+		&i.Provider,
 		&i.EventType,
 		&i.Processed,
 		&i.Payload,
@@ -169,16 +213,48 @@ func (q *Queries) GetUserSubscription(ctx context.Context, userID pgtype.UUID) (
 }
 
 const markPaymentProcessed = `-- name: MarkPaymentProcessed :exec
-UPDATE payment_events
+UPDATE payment_intents
 SET
-    processed = TRUE,
-    updated_at = NOW()
+    processed = TRUE
 WHERE provider_event_id = $1
 `
 
 func (q *Queries) MarkPaymentProcessed(ctx context.Context, providerEventID string) error {
 	_, err := q.db.Exec(ctx, markPaymentProcessed, providerEventID)
 	return err
+}
+
+const updateUserPlan = `-- name: UpdateUserPlan :one
+UPDATE user_subscriptions
+SET
+    plan = $2,
+    updated_at = NOW()
+WHERE user_id = $1
+RETURNING id, user_id, plan, status, provider_customer_id, provider_subscription_id, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at
+`
+
+type UpdateUserPlanParams struct {
+	UserID pgtype.UUID
+	Plan   SubscriptionPlan
+}
+
+func (q *Queries) UpdateUserPlan(ctx context.Context, arg UpdateUserPlanParams) (UserSubscription, error) {
+	row := q.db.QueryRow(ctx, updateUserPlan, arg.UserID, arg.Plan)
+	var i UserSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Plan,
+		&i.Status,
+		&i.ProviderCustomerID,
+		&i.ProviderSubscriptionID,
+		&i.CurrentPeriodStart,
+		&i.CurrentPeriodEnd,
+		&i.CancelAtPeriodEnd,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateUserSubscription = `-- name: UpdateUserSubscription :one

@@ -2,27 +2,40 @@ package subscription
 
 type Plan struct {
 	Name  string
-	Limit int64
 	Price int64
+	Limit int64
+	Features []string
 }
 
 var Plans = map[string]Plan{
-	"free": {
+	PlanFree: {
 		Name:  "free",
-		Limit: 10,
 		Price: 0,
+		Limit: 10,
+		Features: []string{
+			"10 active links",
+		},
 	},
 
-	"starter": {
+	PlanStarter: {
 		Name:  "starter",
-		Limit: 50,
 		Price: 899,
+		Limit: 50,
+		Features: []string{
+			"50 active links",
+			"Basic analytics",
+		},
 	},
 
-	"pro": {
+	PlanPro: {
 		Name:  "pro",
-		Limit: 100,
 		Price: 1499,
+		Limit: 100,
+		Features: []string{
+			"100 active links",
+			"Advanced analytics",
+			"Priority support",
+		},
 	},
 }
 
@@ -34,7 +47,7 @@ func GetPlan(
 		Plans[name]
 
 	if !exists {
-		return Plans["free"]
+		return Plans[PlanFree]
 	}
 
 	return plan
