@@ -112,10 +112,10 @@ AND is_deleted = FALSE;
 -- name: MarkPaymentProcessed :exec
 UPDATE payment_intents
 SET
-    processed = TRUE
+    status = 'succeeded'
 WHERE provider_event_id = $1;
 
--- name: CreateOrGetPaymentIntent :one
+-- name: CreatePaymentIntent :one
 INSERT INTO payment_intents (
     provider_event_id,
     provider,
@@ -123,7 +123,7 @@ INSERT INTO payment_intents (
     user_id,
     plan,
     idempotency_key,
-    processed
+    status
 )
 VALUES (
     $1,
@@ -132,35 +132,58 @@ VALUES (
     $4,
     $5,
     $6,
-    FALSE
+    'pending'
 )
-ON CONFLICT (idempotency_key)
-DO UPDATE
-SET idempotency_key = payment_intents.idempotency_key
-RETURNING *;
-
--- name: CompletePaymentIntent :one
-UPDATE payment_intents
-SET
-    processed = TRUE
-WHERE
-    provider_event_id = $1
-    AND user_id = $2
-    AND processed = FALSE
 RETURNING *;
 
 -- name: GetUserPaymentIntentByCheckoutID :one
 SELECT *
 FROM payment_intents
 WHERE
-    provider_event_id = $1
-    AND user_id = $2
+    provider = $1
+    AND provider_event_id = $2
+    AND user_id = $3
 LIMIT 1;
 
 -- name: UpdateUserPlan :one
 UPDATE user_subscriptions
 SET
     plan = $2,
+    updated_at = NOW()
+WHERE user_id = $1
+RETURNING *;
+
+-- name: GetPaymentIntentForUpdate :one
+SELECT *
+FROM payment_intents
+WHERE
+    provider = $1
+    AND provider_event_id = $2
+LIMIT 1
+FOR UPDATE;
+
+-- name: MarkPaymentIntentSucceededByID :one
+UPDATE payment_intents
+SET
+    status = 'succeeded'
+WHERE
+    id = $1
+    AND status = 'pending'
+RETURNING *;
+
+-- name: MarkPaymentIntentFailedByID :one
+UPDATE payment_intents
+SET status = 'failed'
+WHERE
+    id = $1
+    AND status = 'pending'
+RETURNING *;
+
+-- name: ActivateUserSubscriptionPlan :one
+UPDATE user_subscriptions
+SET
+    plan = $2,
+    status = 'active',
     updated_at = NOW()
 WHERE user_id = $1
 RETURNING *;

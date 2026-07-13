@@ -57,3 +57,25 @@ SET
     processed_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+-- name: ClaimPendingPaymentWebhook :one
+WITH next_webhook AS (
+    SELECT id
+    FROM payment_webhooks
+    WHERE processing_status = 'pending'
+    ORDER BY received_at ASC
+    FOR UPDATE SKIP LOCKED
+    LIMIT 1
+)
+UPDATE payment_webhooks
+SET
+    processing_status = 'processing',
+    processing_attempts = processing_attempts + 1,
+    processed_at = NULL,
+    last_error = NULL
+WHERE id = (
+    SELECT id
+    FROM next_webhook
+)
+RETURNING *;
+

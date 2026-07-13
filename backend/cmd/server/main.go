@@ -217,7 +217,11 @@ func main() {
 			DB:      pgPool,
 			PaymentProvider: dodoProvider,
 		}
-
+	if cfg.EnableWorkers {
+		go subscriptionService.RunWebhookWorker(
+			appCtx,
+		)
+	}
 	subscriptionHandler :=
 		&subscriptionpkg.Handler{
 			Service:

@@ -32,7 +32,7 @@ type CheckoutResponse struct {
 type PaymentStatusResponse struct {
 	CheckoutID string `json:"checkout_id"`
 	Plan string `json:"plan"`
-	Processed bool `json:"processed"`
+	Status string `json:"status"`
 }
 
 type CompleteCheckoutRequest struct {

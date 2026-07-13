@@ -12,6 +12,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type PaymentIntentStatus string
+
+const (
+	PaymentIntentStatusPending   PaymentIntentStatus = "pending"
+	PaymentIntentStatusSucceeded PaymentIntentStatus = "succeeded"
+	PaymentIntentStatusFailed    PaymentIntentStatus = "failed"
+	PaymentIntentStatusCancelled PaymentIntentStatus = "cancelled"
+	PaymentIntentStatusExpired   PaymentIntentStatus = "expired"
+)
+
+func (e *PaymentIntentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentIntentStatus(s)
+	case string:
+		*e = PaymentIntentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentIntentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentIntentStatus struct {
+	PaymentIntentStatus PaymentIntentStatus
+	Valid               bool // Valid is true if PaymentIntentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentIntentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentIntentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentIntentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentIntentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentIntentStatus), nil
+}
+
 type PaymentProvider string
 
 const (
@@ -232,12 +277,12 @@ type PaymentIntent struct {
 	ProviderEventID string
 	Provider        PaymentProvider
 	EventType       string
-	Processed       bool
 	Payload         []byte
 	CreatedAt       pgtype.Timestamptz
 	UserID          pgtype.UUID
 	Plan            NullSubscriptionPlan
 	IdempotencyKey  pgtype.Text
+	Status          PaymentIntentStatus
 }
 
 type PaymentWebhook struct {

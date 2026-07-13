@@ -2,17 +2,18 @@ package subscription
 
 import (
 	"context"
+	// "errors"
 	"fmt"
-	"errors"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
+	"github.com/google/uuid"
+	// "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Service struct {
-	Queries *db.Queries
-	DB      *pgxpool.Pool
+	Queries         *db.Queries
+	DB              *pgxpool.Pool
 	PaymentProvider PaymentProvider
 }
 
@@ -83,39 +84,29 @@ func (
 	}
 
 	return &SubscriptionResponse{
-		Plan:
+		Plan: plan.Name,
+
+		Status: string(
+			subscription.Status,
+		),
+
+		Price: plan.Price,
+
+		LinkLimit: plan.Limit,
+
+		LinksUsed: linksUsed,
+
+		LinksRemaining: remaining,
+
+		UsagePercent: usagePercent,
+
+		CanCreateLinks: canCreate,
+
+		CanUpgradeTo: GetAllowedUpgrades(
 			plan.Name,
+		),
 
-		Status:
-			string(
-				subscription.Status,
-			),
-
-		Price:
-			plan.Price,
-
-		LinkLimit:
-			plan.Limit,
-
-		LinksUsed:
-			linksUsed,
-
-		LinksRemaining:
-			remaining,
-
-		UsagePercent: 
-			usagePercent,
-
-		CanCreateLinks:
-			canCreate,
-
-		CanUpgradeTo:
-			GetAllowedUpgrades(
-				plan.Name,
-			),
-
-		Features: 
-			plan.Features,
+		Features: plan.Features,
 	}, nil
 }
 
@@ -229,15 +220,16 @@ func (
 
 	idempotencyKey :=
 		fmt.Sprintf(
-			"%s:%s",
+			"%s:%s:%s",
 			userID,
 			targetPlan,
+			uuid.NewString(),
 		)
 	plan :=
 		GetPlan(
 			targetPlan,
 		)
-	
+
 	checkoutSession,
 		err :=
 		s.PaymentProvider.
@@ -260,31 +252,26 @@ func (
 
 	paymentIntent, err :=
 		s.Queries.
-			CreateOrGetPaymentIntent(
+			CreatePaymentIntent(
 				ctx,
-				db.CreateOrGetPaymentIntentParams{
-					ProviderEventID:
-						checkoutSession.CheckoutID,
+				db.CreatePaymentIntentParams{
+					ProviderEventID: checkoutSession.CheckoutID,
 
-					Provider:
-						db.PaymentProviderDodo,
+					Provider: db.PaymentProviderDodo,
 
-					EventType:
-						EventCheckoutCreated,
+					EventType: EventCheckoutCreated,
 
-					UserID:
-						pgUserID,
+					UserID: pgUserID,
 
 					Plan: db.NullSubscriptionPlan{
 						SubscriptionPlan: db.SubscriptionPlan(targetPlan),
-						Valid: true,
+						Valid:            true,
 					},
 
-					IdempotencyKey:
-						pgtype.Text{
-							String: idempotencyKey,
-							Valid: true,
-						},
+					IdempotencyKey: pgtype.Text{
+						String: idempotencyKey,
+						Valid:  true,
+					},
 				},
 			)
 
@@ -300,131 +287,16 @@ func (
 	}
 
 	return &CheckoutResponse{
-		CheckoutID:
-			paymentIntent.ProviderEventID,
+		CheckoutID: paymentIntent.ProviderEventID,
 
-		CheckoutURL:
-			checkoutSession.CheckoutURL,
+		CheckoutURL: checkoutSession.CheckoutURL,
 
-		Plan:
-			targetPlan,
+		Plan: targetPlan,
 
-		Price:
-			plan.Price,
+		Price: plan.Price,
 
-		Message:
-			"checkout created",
+		Message: "checkout created",
 	}, nil
-}
-
-func (
-	s *Service,
-) CompleteCheckout(
-	ctx context.Context,
-	userID string,
-	checkoutID string,
-) error {
-	pgUserID, err :=
-		parseUUID(
-			userID,
-		)
-
-	if err != nil {
-		return err
-	}
-
-	tx, err :=
-		s.DB.BeginTx(
-			ctx,
-			pgx.TxOptions{},
-		)
-
-	if err != nil {
-		return err
-	}
-
-	committed := false
-
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
-		}
-	}()
-	txQueries :=
-		s.Queries.WithTx(
-			tx,
-		)
-
-	payment, err :=
-		txQueries.
-			CompletePaymentIntent(
-				ctx,
-				db.CompletePaymentIntentParams{
-					ProviderEventID:
-						checkoutID,
-
-					UserID:
-						pgUserID,
-				},
-			)
-
-	if err != nil {
-
-		if errors.Is(
-			err,
-			pgx.ErrNoRows,
-		) {
-
-			return nil
-		}
-
-		return err
-	}
-
-	if !payment.Plan.Valid {
-		return ErrInvalidPaymentPlan
-	}
-
-	plan :=
-		db.SubscriptionPlan(
-			string(payment.Plan.SubscriptionPlan),
-		)
-
-	switch plan {
-
-	case db.SubscriptionPlanStarter,
-		db.SubscriptionPlanPro:
-
-	default:
-		return ErrInvalidPaymentPlan
-	}
-
-	_, err =
-		txQueries.
-			UpdateUserPlan(
-				ctx,
-				db.UpdateUserPlanParams{
-					UserID:
-						payment.UserID,
-
-					Plan:
-						plan,
-				},
-			)
-	if err != nil {
-		return err
-	}
-	err =
-	tx.Commit(
-		ctx,
-	)
-	
-	if err != nil {
-		return err
-	}
-	committed = true
-
-	return nil
 }
 
 func (
@@ -450,11 +322,11 @@ func (
 			GetUserPaymentIntentByCheckoutID(
 				ctx,
 				db.GetUserPaymentIntentByCheckoutIDParams{
-					ProviderEventID:
-						checkoutID,
+					Provider: db.PaymentProviderDodo,
 
-					UserID:
-						pgUserID,
+					ProviderEventID: checkoutID,
+
+					UserID: pgUserID,
 				},
 			)
 
@@ -462,15 +334,16 @@ func (
 		return nil, err
 	}
 
+	if !payment.Plan.Valid {
+		return nil, ErrInvalidPaymentPlan
+	}
+
 	return &PaymentStatusResponse{
-		CheckoutID:
-			payment.ProviderEventID,
+		CheckoutID: payment.ProviderEventID,
 
-		Plan:
-			string(payment.Plan.SubscriptionPlan),
+		Plan: string(payment.Plan.SubscriptionPlan),
 
-		Processed:
-			payment.Processed,
+		Status: string(payment.Status),
 	}, nil
 }
 
@@ -481,34 +354,25 @@ func (
 	return &PlansResponse{
 		Plans: []PlanResponse{
 			{
-				Name:
-					PlanFree,
+				Name: PlanFree,
 
-				Price:
-					PriceFree,
+				Price: PriceFree,
 
-				LinkLimit:
-					FreePlanLimit,
+				LinkLimit: FreePlanLimit,
 			},
 			{
-				Name:
-					PlanStarter,
+				Name: PlanStarter,
 
-				Price:
-					PriceStarter,
+				Price: PriceStarter,
 
-				LinkLimit:
-					StarterPlanLimit,
+				LinkLimit: StarterPlanLimit,
 			},
 			{
-				Name:
-					PlanPro,
+				Name: PlanPro,
 
-				Price:
-					PricePro,
+				Price: PricePro,
 
-				LinkLimit:
-					ProPlanLimit,
+				LinkLimit: ProPlanLimit,
 			},
 		},
 	}

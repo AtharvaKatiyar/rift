@@ -11,6 +11,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimPendingPaymentWebhook = `-- name: ClaimPendingPaymentWebhook :one
+WITH next_webhook AS (
+    SELECT id
+    FROM payment_webhooks
+    WHERE processing_status = 'pending'
+    ORDER BY received_at ASC
+    FOR UPDATE SKIP LOCKED
+    LIMIT 1
+)
+UPDATE payment_webhooks
+SET
+    processing_status = 'processing',
+    processing_attempts = processing_attempts + 1,
+    processed_at = NULL,
+    last_error = NULL
+WHERE id = (
+    SELECT id
+    FROM next_webhook
+)
+RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at
+`
+
+func (q *Queries) ClaimPendingPaymentWebhook(ctx context.Context) (PaymentWebhook, error) {
+	row := q.db.QueryRow(ctx, claimPendingPaymentWebhook)
+	var i PaymentWebhook
+	err := row.Scan(
+		&i.ID,
+		&i.Provider,
+		&i.ProviderEventID,
+		&i.EventType,
+		&i.Headers,
+		&i.Payload,
+		&i.ProcessingStatus,
+		&i.ProcessingAttempts,
+		&i.LastError,
+		&i.ReceivedAt,
+		&i.ProcessedAt,
+	)
+	return i, err
+}
+
 const createPaymentWebhook = `-- name: CreatePaymentWebhook :exec
 INSERT INTO payment_webhooks (
     provider,

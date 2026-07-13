@@ -21,4 +21,8 @@ type PaymentProvider interface {
 		*WebhookEvent,
 		error,
 	)
+
+	DecodeWebhook(
+		payload []byte,
+	) (*WebhookEvent, error)
 }

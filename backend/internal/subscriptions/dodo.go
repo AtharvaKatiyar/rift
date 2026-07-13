@@ -118,7 +118,8 @@ func (
 		return nil, err
 	}
 
-	httpHeaders := http.Header{}
+	httpHeaders :=
+		http.Header{}
 
 	httpHeaders.Set(
 		standardwebhooks.HeaderWebhookID,
@@ -145,9 +146,23 @@ func (
 		return nil, err
 	}
 
+	return p.DecodeWebhook(
+		payload,
+	)
+}
+
+func (
+	p *DodoProvider,
+) DecodeWebhook(
+	payload []byte,
+) (
+	*WebhookEvent,
+	error,
+) {
+
 	var event WebhookEvent
 
-	err =
+	err :=
 		json.Unmarshal(
 			payload,
 			&event,
@@ -159,7 +174,6 @@ func (
 
 	return &event, nil
 }
-
 
 func (
 	p *DodoProvider,
