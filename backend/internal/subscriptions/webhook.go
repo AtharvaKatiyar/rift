@@ -13,12 +13,12 @@ type WebhookEvent struct {
 }
 
 type WebhookEventData struct {
-	PaymentID         string              `json:"payment_id"`
-	CheckoutSessionID string              `json:"checkout_session_id"`
-	Status            string              `json:"status"`
-	Customer          WebhookCustomer     `json:"customer"`
-	ProductCart       []WebhookProduct    `json:"product_cart"`
-	Metadata          map[string]string   `json:"metadata"`
+	PaymentID         string            `json:"payment_id"`
+	CheckoutSessionID string            `json:"checkout_session_id"`
+	Status            string            `json:"status"`
+	Customer          WebhookCustomer   `json:"customer"`
+	ProductCart       []WebhookProduct  `json:"product_cart"`
+	Metadata          map[string]string `json:"metadata"`
 }
 
 type WebhookCustomer struct {

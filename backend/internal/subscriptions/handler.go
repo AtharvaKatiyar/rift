@@ -1,10 +1,10 @@
 package subscription
 
 import (
-	"net/http"
 	"errors"
-	"github.com/jackc/pgx/v5"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
+	"net/http"
 )
 
 type Handler struct {
@@ -27,8 +27,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"unauthorized",
+				"error": "unauthorized",
 			},
 		)
 
@@ -43,8 +42,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"invalid auth context",
+				"error": "invalid auth context",
 			},
 		)
 
@@ -62,8 +60,7 @@ func (
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
-				"error":
-					err.Error(),
+				"error": err.Error(),
 			},
 		)
 
@@ -92,8 +89,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"unauthorized",
+				"error": "unauthorized",
 			},
 		)
 
@@ -108,8 +104,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"invalid auth context",
+				"error": "invalid auth context",
 			},
 		)
 
@@ -126,8 +121,7 @@ func (
 		c.JSON(
 			http.StatusBadRequest,
 			gin.H{
-				"error":
-					"invalid request",
+				"error": "invalid request",
 			},
 		)
 
@@ -154,8 +148,7 @@ func (
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{
-					"error":
-						"invalid plan",
+					"error": "invalid plan",
 				},
 			)
 
@@ -167,8 +160,7 @@ func (
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{
-					"error":
-						"invalid upgrade path",
+					"error": "invalid upgrade path",
 				},
 			)
 
@@ -177,8 +169,7 @@ func (
 			c.JSON(
 				http.StatusInternalServerError,
 				gin.H{
-					"error":
-						err.Error(),
+					"error": err.Error(),
 				},
 			)
 		}
@@ -189,8 +180,7 @@ func (
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"message":
-				"upgrade allowed",
+			"message": "upgrade allowed",
 		},
 	)
 }
@@ -211,8 +201,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"unauthorized",
+				"error": "unauthorized",
 			},
 		)
 
@@ -227,8 +216,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"invalid auth context",
+				"error": "invalid auth context",
 			},
 		)
 
@@ -245,8 +233,7 @@ func (
 		c.JSON(
 			http.StatusBadRequest,
 			gin.H{
-				"error":
-					"invalid request",
+				"error": "invalid request",
 			},
 		)
 
@@ -273,8 +260,7 @@ func (
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{
-					"error":
-						"invalid plan",
+					"error": "invalid plan",
 				},
 			)
 
@@ -286,8 +272,7 @@ func (
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{
-					"error":
-						"invalid upgrade path",
+					"error": "invalid upgrade path",
 				},
 			)
 
@@ -296,8 +281,7 @@ func (
 			c.JSON(
 				http.StatusInternalServerError,
 				gin.H{
-					"error":
-						err.Error(),
+					"error": err.Error(),
 				},
 			)
 		}
@@ -327,8 +311,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"unauthorized",
+				"error": "unauthorized",
 			},
 		)
 
@@ -343,8 +326,7 @@ func (
 		c.JSON(
 			http.StatusUnauthorized,
 			gin.H{
-				"error":
-					"invalid auth context",
+				"error": "invalid auth context",
 			},
 		)
 
@@ -374,8 +356,7 @@ func (
 			c.JSON(
 				http.StatusNotFound,
 				gin.H{
-					"error":
-						"checkout not found",
+					"error": "checkout not found",
 				},
 			)
 
@@ -385,8 +366,7 @@ func (
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
-				"error":
-					"internal server error",
+				"error": "internal server error",
 			},
 		)
 

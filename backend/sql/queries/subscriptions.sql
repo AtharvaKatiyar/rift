@@ -109,12 +109,6 @@ FROM central_links
 WHERE user_id = $1
 AND is_deleted = FALSE;
 
--- name: MarkPaymentProcessed :exec
-UPDATE payment_intents
-SET
-    status = 'succeeded'
-WHERE provider_event_id = $1;
-
 -- name: CreatePaymentIntent :one
 INSERT INTO payment_intents (
     provider_event_id,

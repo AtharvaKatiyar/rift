@@ -1,11 +1,11 @@
 package subscription
 
 import (
+	"github.com/AtharvaKatiyar/rift/internal/logger"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
-	"go.uber.org/zap"
-	"github.com/gin-gonic/gin"
-	"github.com/AtharvaKatiyar/rift/internal/logger"
 )
 
 func (
@@ -33,22 +33,19 @@ func (
 
 	headers :=
 		WebhookHeaders{
-			ID:
-				c.GetHeader(
-					"webhook-id",
-				),
+			ID: c.GetHeader(
+				"webhook-id",
+			),
 
-			Signature:
-				c.GetHeader(
-					"webhook-signature",
-				),
+			Signature: c.GetHeader(
+				"webhook-signature",
+			),
 
-			Timestamp:
-				c.GetHeader(
-					"webhook-timestamp",
-				),
+			Timestamp: c.GetHeader(
+				"webhook-timestamp",
+			),
 		}
-	
+
 	if headers.ID == "" ||
 		headers.Signature == "" ||
 		headers.Timestamp == "" {
@@ -90,7 +87,6 @@ func (
 			headers.Timestamp,
 		),
 	)
-
 
 	err = h.Service.HandleWebhook(
 		c.Request.Context(),

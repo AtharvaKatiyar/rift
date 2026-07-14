@@ -299,18 +299,6 @@ func (q *Queries) MarkPaymentIntentSucceededByID(ctx context.Context, id pgtype.
 	return i, err
 }
 
-const markPaymentProcessed = `-- name: MarkPaymentProcessed :exec
-UPDATE payment_intents
-SET
-    status = 'succeeded'
-WHERE provider_event_id = $1
-`
-
-func (q *Queries) MarkPaymentProcessed(ctx context.Context, providerEventID string) error {
-	_, err := q.db.Exec(ctx, markPaymentProcessed, providerEventID)
-	return err
-}
-
 const updateUserPlan = `-- name: UpdateUserPlan :one
 UPDATE user_subscriptions
 SET

@@ -3,9 +3,9 @@ package subscription
 import (
 	"context"
 	"encoding/json"
-    "net/http"
+	"net/http"
 
-    standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
+	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
 	"github.com/dodopayments/dodopayments-go"
 )
@@ -43,49 +43,42 @@ func (
 	}
 
 	res, err :=
-	p.Client.
-		CheckoutSessions.
-		New(
-			ctx,
-			dodopayments.CheckoutSessionNewParams{
-				CheckoutSessionRequest:
-					dodopayments.CheckoutSessionRequestParam{
+		p.Client.
+			CheckoutSessions.
+			New(
+				ctx,
+				dodopayments.CheckoutSessionNewParams{
+					CheckoutSessionRequest: dodopayments.CheckoutSessionRequestParam{
 
-						ProductCart:
-							dodopayments.F(
-								[]dodopayments.ProductItemReqParam{
-									{
-										ProductID:
-											dodopayments.F(
-												productID,
-											),
+						ProductCart: dodopayments.F(
+							[]dodopayments.ProductItemReqParam{
+								{
+									ProductID: dodopayments.F(
+										productID,
+									),
 
-										Quantity:
-											dodopayments.F(
-												int64(1),
-											),
-									},
+									Quantity: dodopayments.F(
+										int64(1),
+									),
 								},
-							),
+							},
+						),
 
-						ReturnURL:
-							dodopayments.F(
-								p.SuccessURL,
-							),
+						ReturnURL: dodopayments.F(
+							p.SuccessURL,
+						),
 					},
-			},
-		)
+				},
+			)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return &CheckoutSession{
-		CheckoutID:
-			res.SessionID,
+		CheckoutID: res.SessionID,
 
-		CheckoutURL:
-			res.CheckoutURL,
+		CheckoutURL: res.CheckoutURL,
 	}, nil
 }
 

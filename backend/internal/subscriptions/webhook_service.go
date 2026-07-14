@@ -47,11 +47,9 @@ func (
 			ID        string `json:"webhook_id"`
 			Timestamp string `json:"webhook_timestamp"`
 		}{
-			ID:
-				headers.ID,
+			ID: headers.ID,
 
-			Timestamp:
-				headers.Timestamp,
+			Timestamp: headers.Timestamp,
 		}
 
 	headersJSON, err :=
@@ -72,20 +70,15 @@ func (
 			CreatePaymentWebhook(
 				ctx,
 				db.CreatePaymentWebhookParams{
-					Provider:
-						db.PaymentProviderDodo,
+					Provider: db.PaymentProviderDodo,
 
-					ProviderEventID:
-						headers.ID,
+					ProviderEventID: headers.ID,
 
-					EventType:
-						event.Type,
+					EventType: event.Type,
 
-					Headers:
-						headersJSON,
+					Headers: headersJSON,
 
-					Payload:
-						payload,
+					Payload: payload,
 				},
 			)
 

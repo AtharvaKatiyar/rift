@@ -1,9 +1,9 @@
 package subscription
 
 type Plan struct {
-	Name  string
-	Price int64
-	Limit int64
+	Name     string
+	Price    int64
+	Limit    int64
 	Features []string
 }
 

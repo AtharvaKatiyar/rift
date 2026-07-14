@@ -1,38 +1,38 @@
 package main
 
 import (
+	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"context"
-	"net/http"
-	"time"         
+	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 
-	"go.uber.org/zap"
+	analyticspkg "github.com/AtharvaKatiyar/rift/internal/analytics"
+	authpkg "github.com/AtharvaKatiyar/rift/internal/auth"
 	"github.com/AtharvaKatiyar/rift/internal/cache"
+	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
 	"github.com/AtharvaKatiyar/rift/internal/config"
 	"github.com/AtharvaKatiyar/rift/internal/database"
-	"github.com/AtharvaKatiyar/rift/internal/middleware"
-	"github.com/AtharvaKatiyar/rift/internal/health"
-	"github.com/AtharvaKatiyar/rift/internal/metrics"
-	"github.com/AtharvaKatiyar/rift/internal/logger"
-	"github.com/AtharvaKatiyar/rift/internal/geoip"
-	"github.com/dodopayments/dodopayments-go/option"
-	dodopayments "github.com/dodopayments/dodopayments-go"
-	authpkg "github.com/AtharvaKatiyar/rift/internal/auth"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
+	"github.com/AtharvaKatiyar/rift/internal/geoip"
+	"github.com/AtharvaKatiyar/rift/internal/health"
 	linkspkg "github.com/AtharvaKatiyar/rift/internal/links"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
+	"github.com/AtharvaKatiyar/rift/internal/metrics"
+	"github.com/AtharvaKatiyar/rift/internal/middleware"
 	redirectpkg "github.com/AtharvaKatiyar/rift/internal/redirect"
-	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
-	analyticspkg "github.com/AtharvaKatiyar/rift/internal/analytics"
 	subscriptionpkg "github.com/AtharvaKatiyar/rift/internal/subscriptions"
+	dodopayments "github.com/dodopayments/dodopayments-go"
+	"github.com/dodopayments/dodopayments-go/option"
+	"go.uber.org/zap"
 )
 
 func main() {
-	
+
 	cfg := config.LoadConfig()
 
 	hostname, err :=
@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		hostname = "unknown"
 	}
-	
+
 	appCtx,
 		appCancel :=
 		context.WithCancel(
@@ -49,11 +49,11 @@ func main() {
 		)
 
 	defer appCancel()
-	
+
 	isProduction :=
 		cfg.AppEnv ==
 			"production"
-	
+
 	if isProduction {
 		gin.SetMode(
 			gin.ReleaseMode,
@@ -103,33 +103,29 @@ func main() {
 	}
 
 	queries := db.New(pgPool)
-	
+
 	clicksService :=
 		&clickspkg.Service{
-			Redis:
-				redisClient,
+			Redis: redisClient,
 
-			Queue:
-				make(
-					chan string,
-					10000,
-				),
+			Queue: make(
+				chan string,
+				10000,
+			),
 		}
 	analyticsService :=
 		&analyticspkg.Service{
-			Queries:
-				queries,
+			Queries: queries,
 
 			Queue: make(
 				chan db.CreateLinkAnalyticsParams,
 				10000,
 			),
 
-			GeoIP:
-				geoService,
+			GeoIP: geoService,
 		}
 
-	if cfg.EnableWorkers{
+	if cfg.EnableWorkers {
 		logger.Log.Info(
 			"starting background workers",
 		)
@@ -138,8 +134,7 @@ func main() {
 			appCtx,
 			200,
 		)
-	
-	
+
 		clickspkg.StartFlushWorker(
 			appCtx,
 			queries,
@@ -150,20 +145,18 @@ func main() {
 			20,
 		)
 	}
-		
 
 	authService := &authpkg.Service{
 		Queries: queries,
 		DB:      pgPool,
-		Secret: cfg.JWTSecret,
+		Secret:  cfg.JWTSecret,
 	}
 
 	authHandler :=
-	&authpkg.Handler{
-		Service:
-			authService,
-		IsProduction: isProduction,
-	}
+		&authpkg.Handler{
+			Service:      authService,
+			IsProduction: isProduction,
+		}
 
 	// client :=
 	// 	dodopayments.NewClient(
@@ -198,34 +191,33 @@ func main() {
 		&subscriptionpkg.DodoProvider{
 			Client: client,
 
-			StarterProductID:
-				cfg.DodoStarterProductID,
+			StarterProductID: cfg.DodoStarterProductID,
 
-			ProProductID:
-				cfg.DodoProProductID,
+			ProProductID: cfg.DodoProProductID,
 
-			SuccessURL:
-				cfg.DodoSuccessURL,
+			SuccessURL: cfg.DodoSuccessURL,
 
-			WebhookSecret:
-				cfg.DodoWebhookSecret,
+			WebhookSecret: cfg.DodoWebhookSecret,
 		}
 
 	subscriptionService :=
 		&subscriptionpkg.Service{
-			Queries: queries,
-			DB:      pgPool,
+			Queries:         queries,
+			DB:              pgPool,
 			PaymentProvider: dodoProvider,
 		}
 	if cfg.EnableWorkers {
 		go subscriptionService.RunWebhookWorker(
 			appCtx,
 		)
+		go subscriptionService.
+			RunWebhookRecoveryWorker(
+				appCtx,
+			)
 	}
 	subscriptionHandler :=
 		&subscriptionpkg.Handler{
-			Service:
-				subscriptionService,
+			Service: subscriptionService,
 		}
 
 	router := gin.Default()
@@ -285,28 +277,20 @@ func main() {
 
 	healthHandler :=
 		&health.Handler{
-			Postgres:
-				pgPool,
-			Redis:
-				redisClient,
-			StartTime:
-				time.Now(),
-			Instance:
-				hostname,
-			Workers:
-				cfg.EnableWorkers,
-	}
+			Postgres:  pgPool,
+			Redis:     redisClient,
+			StartTime: time.Now(),
+			Instance:  hostname,
+			Workers:   cfg.EnableWorkers,
+		}
 
 	metricsHandler :=
 		&metrics.Handler{
-			Postgres:
-				pgPool,
+			Postgres: pgPool,
 
-			Redis:
-				redisClient,
+			Redis: redisClient,
 
-			Clicks:
-				clicksService,
+			Clicks: clicksService,
 		}
 
 	router.GET(
@@ -379,7 +363,7 @@ func main() {
 	linksService := &linkspkg.Service{
 		Queries: queries,
 		BaseURL: cfg.BaseURL,
-		Redis: redisClient,
+		Redis:   redisClient,
 	}
 
 	linksHandler := &linkspkg.Handler{
@@ -388,8 +372,7 @@ func main() {
 
 	analyticsHandler :=
 		&analyticspkg.Handler{
-			Service:
-				analyticsService,
+			Service: analyticsService,
 		}
 
 	linksRoutes := api.Group(
@@ -483,17 +466,13 @@ func main() {
 	}
 
 	redirectService := &redirectpkg.Service{
-		Queries:
-			queries,
+		Queries: queries,
 
-			Redis:
-				redisClient,
+		Redis: redisClient,
 
-			Clicks:
-				clicksService,
+		Clicks: clicksService,
 
-			Analytics:
-				analyticsService,
+		Analytics: analyticsService,
 	}
 
 	redirectHandler := &redirectpkg.Handler{
@@ -503,30 +482,25 @@ func main() {
 	router.GET(
 		"/u/:username/:slug/:key",
 		middleware.RateLimit(
-				redisClient,
-				100,
-				time.Minute,
-				"redirect",
-			),
+			redisClient,
+			100,
+			time.Minute,
+			"redirect",
+		),
 		redirectHandler.Redirect,
 	)
 
 	server := &http.Server{
-		Addr:
-			":" +
-				cfg.ServerPort,
+		Addr: ":" +
+			cfg.ServerPort,
 
-		Handler:
-			router,
+		Handler: router,
 
-		ReadTimeout:
-			10 * time.Second,
+		ReadTimeout: 10 * time.Second,
 
-		WriteTimeout:
-			10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 
-		IdleTimeout:
-			60 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
 
 	go func() {

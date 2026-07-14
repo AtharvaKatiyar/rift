@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
@@ -12,8 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrNoPendingWebhooks = errors.New(
-	"no pending payment webhooks",
+var ErrNoProcessableWebhooks = errors.New(
+	"no processable payment webhooks",
 )
 
 func (
@@ -24,15 +25,21 @@ func (
 
 	webhook, err :=
 		s.Queries.
-			ClaimPendingPaymentWebhook(
+			ClaimNextPaymentWebhook(
 				ctx,
+				db.ClaimNextPaymentWebhookParams{
+					MaxAttempts: MaxPaymentWebhookProcessingAttempts,
+					StaleTimeoutSeconds: int32(
+						PaymentWebhookProcessingStaleTimeout.Seconds(),
+					),
+				},
 			)
 
 	if errors.Is(
 		err,
 		pgx.ErrNoRows,
 	) {
-		return ErrNoPendingWebhooks
+		return ErrNoProcessableWebhooks
 	}
 
 	if err != nil {
@@ -69,6 +76,7 @@ func (
 		return s.failPaymentWebhook(
 			ctx,
 			webhook.ID,
+			webhook.ProcessingAttempts,
 			fmt.Errorf(
 				"decode stored webhook: %w",
 				err,
@@ -88,6 +96,7 @@ func (
 		return s.failPaymentWebhook(
 			ctx,
 			webhook.ID,
+			webhook.ProcessingAttempts,
 			err,
 		)
 	}
@@ -213,8 +222,7 @@ func (
 			GetPaymentIntentForUpdate(
 				ctx,
 				db.GetPaymentIntentForUpdateParams{
-					Provider: db.PaymentProviderDodo,
-
+					Provider: webhook.Provider,
 					ProviderEventID: checkoutID,
 				},
 			)
@@ -385,6 +393,10 @@ func (
 	logger.Log.Info(
 		"payment succeeded transaction committed",
 		zap.String(
+			"payment_intent_id",
+			paymentIntent.ID.String(),
+		),
+		zap.String(
 			"webhook_id",
 			webhook.ProviderEventID,
 		),
@@ -459,8 +471,7 @@ func (
 			GetPaymentIntentForUpdate(
 				ctx,
 				db.GetPaymentIntentForUpdateParams{
-					Provider: db.PaymentProviderDodo,
-
+					Provider: webhook.Provider,
 					ProviderEventID: checkoutID,
 				},
 			)
@@ -592,6 +603,10 @@ func (
 	logger.Log.Info(
 		"payment failed transaction committed",
 		zap.String(
+			"payment_intent_id",
+			paymentIntent.ID.String(),
+		),
+		zap.String(
 			"webhook_id",
 			webhook.ProviderEventID,
 		),
@@ -613,10 +628,32 @@ func (
 ) failPaymentWebhook(
 	ctx context.Context,
 	webhookID pgtype.UUID,
+	processingAttempts int32,
 	processingErr error,
 ) error {
 
-	_, err :=
+	var nextRetryAt pgtype.Timestamptz
+
+	retryDelay,
+		shouldRetry :=
+		paymentWebhookRetryDelay(
+			processingAttempts,
+		)
+
+	if shouldRetry {
+
+		nextRetryAt =
+			pgtype.Timestamptz{
+				Time: time.Now().
+					Add(
+						retryDelay,
+					),
+
+				Valid: true,
+			}
+	}
+
+	webhook, err :=
 		s.Queries.
 			MarkPaymentWebhookFailed(
 				ctx,
@@ -625,8 +662,11 @@ func (
 
 					LastError: pgtype.Text{
 						String: processingErr.Error(),
-						Valid:  true,
+
+						Valid: true,
 					},
+
+					NextRetryAt: nextRetryAt,
 				},
 			)
 
@@ -634,7 +674,13 @@ func (
 
 		logger.Log.Error(
 			"failed to mark payment webhook as failed",
-			zap.Error(err),
+			zap.Int32(
+				"processing_attempts",
+				processingAttempts,
+			),
+			zap.Error(
+				err,
+			),
 			zap.NamedError(
 				"processing_error",
 				processingErr,
@@ -648,12 +694,84 @@ func (
 		)
 	}
 
-	logger.Log.Error(
-		"payment webhook processing failed",
-		zap.Error(
-			processingErr,
-		),
-	)
+	if shouldRetry {
+
+		logger.Log.Warn(
+			"payment webhook processing failed; retry scheduled",
+			zap.String(
+				"webhook_id",
+				webhook.ProviderEventID,
+			),
+			zap.Int32(
+				"processing_attempts",
+				processingAttempts,
+			),
+			zap.Duration(
+				"retry_delay",
+				retryDelay,
+			),
+			zap.Time(
+				"next_retry_at",
+				nextRetryAt.Time,
+			),
+			zap.Error(
+				processingErr,
+			),
+		)
+
+	} else {
+
+		logger.Log.Error(
+			"payment webhook processing failed permanently",
+			zap.String(
+				"webhook_id",
+				webhook.ProviderEventID,
+			),
+			zap.Int32(
+				"processing_attempts",
+				processingAttempts,
+			),
+			zap.Error(
+				processingErr,
+			),
+		)
+	}
 
 	return processingErr
+}
+
+func paymentWebhookRetryDelay(
+	attempt int32,
+) (
+	time.Duration,
+	bool,
+) {
+
+	switch attempt {
+
+	case 1:
+
+		return 30 * time.Second,
+			true
+
+	case 2:
+
+		return 2 * time.Minute,
+			true
+
+	case 3:
+
+		return 10 * time.Minute,
+			true
+
+	case 4:
+
+		return 30 * time.Minute,
+			true
+
+	default:
+
+		return 0,
+			false
+	}
 }

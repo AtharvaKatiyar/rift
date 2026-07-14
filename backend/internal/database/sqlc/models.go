@@ -286,17 +286,19 @@ type PaymentIntent struct {
 }
 
 type PaymentWebhook struct {
-	ID                 pgtype.UUID
-	Provider           PaymentProvider
-	ProviderEventID    string
-	EventType          string
-	Headers            []byte
-	Payload            []byte
-	ProcessingStatus   WebhookProcessingStatus
-	ProcessingAttempts int32
-	LastError          pgtype.Text
-	ReceivedAt         pgtype.Timestamptz
-	ProcessedAt        pgtype.Timestamptz
+	ID                  pgtype.UUID
+	Provider            PaymentProvider
+	ProviderEventID     string
+	EventType           string
+	Headers             []byte
+	Payload             []byte
+	ProcessingStatus    WebhookProcessingStatus
+	ProcessingAttempts  int32
+	LastError           pgtype.Text
+	ReceivedAt          pgtype.Timestamptz
+	ProcessedAt         pgtype.Timestamptz
+	ProcessingStartedAt pgtype.Timestamptz
+	NextRetryAt         pgtype.Timestamptz
 }
 
 type RefreshToken struct {

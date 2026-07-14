@@ -5,17 +5,15 @@ import (
 	"errors"
 	"time"
 
+	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
-
 	"go.uber.org/zap"
 )
 
 const (
-	webhookWorkerIdleDelay =
-		2 * time.Second
+	webhookWorkerIdleDelay = 2 * time.Second
 
-	webhookWorkerErrorDelay =
-		5 * time.Second
+	webhookWorkerErrorDelay = 5 * time.Second
 )
 
 func (
@@ -59,7 +57,7 @@ func (
 
 		if errors.Is(
 			err,
-			ErrNoPendingWebhooks,
+			ErrNoProcessableWebhooks,
 		) {
 
 			if !waitForWebhookWorker(
@@ -109,5 +107,76 @@ func waitForWebhookWorker(
 	case <-timer.C:
 
 		return true
+	}
+}
+
+func (
+	s *Service,
+) RunWebhookRecoveryWorker(
+	ctx context.Context,
+) {
+
+	ticker :=
+		time.NewTicker(
+			1 * time.Minute,
+		)
+
+	defer ticker.Stop()
+
+	logger.Log.Info(
+		"payment webhook recovery worker started",
+	)
+
+	for {
+
+		select {
+
+		case <-ctx.Done():
+
+			logger.Log.Info(
+				"payment webhook recovery worker stopped",
+			)
+
+			return
+
+		case <-ticker.C:
+
+			recovered, err :=
+				s.Queries.
+					FailExhaustedStalePaymentWebhooks(
+						ctx,
+						db.FailExhaustedStalePaymentWebhooksParams{
+							StaleTimeoutSeconds: int32(
+								PaymentWebhookProcessingStaleTimeout.
+									Seconds(),
+							),
+
+							MaxAttempts: MaxPaymentWebhookProcessingAttempts,
+						},
+					)
+
+			if err != nil {
+
+				logger.Log.Error(
+					"failed to recover exhausted stale payment webhooks",
+					zap.Error(
+						err,
+					),
+				)
+
+				continue
+			}
+
+			if recovered > 0 {
+
+				logger.Log.Warn(
+					"exhausted stale payment webhooks marked failed",
+					zap.Int64(
+						"count",
+						recovered,
+					),
+				)
+			}
+		}
 	}
 }

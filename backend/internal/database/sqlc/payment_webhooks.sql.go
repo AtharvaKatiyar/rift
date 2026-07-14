@@ -11,30 +11,83 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const claimPendingPaymentWebhook = `-- name: ClaimPendingPaymentWebhook :one
+const claimNextPaymentWebhook = `-- name: ClaimNextPaymentWebhook :one
 WITH next_webhook AS (
-    SELECT id
-    FROM payment_webhooks
-    WHERE processing_status = 'pending'
-    ORDER BY received_at ASC
-    FOR UPDATE SKIP LOCKED
+    SELECT pw.id
+    FROM payment_webhooks AS pw
+    WHERE
+        pw.processing_status = 'pending'
+
+        OR (
+            pw.processing_status = 'failed'
+            AND pw.next_retry_at IS NOT NULL
+            AND pw.next_retry_at <= NOW()
+            AND pw.processing_attempts < $1
+        )
+
+        OR (
+            pw.processing_status = 'processing'
+            AND pw.processing_started_at IS NOT NULL
+            AND pw.processing_started_at <=
+                NOW() - (
+                    $2
+                    * INTERVAL '1 second'
+                )
+            AND pw.processing_attempts < $1
+        )
+
+    ORDER BY
+        CASE
+            WHEN pw.processing_status = 'pending'
+                THEN 0
+            WHEN pw.processing_status = 'failed'
+                THEN 1
+            WHEN pw.processing_status = 'processing'
+                THEN 2
+            ELSE 3
+        END,
+
+        COALESCE(
+            pw.next_retry_at,
+            pw.processing_started_at,
+            pw.received_at
+        ),
+
+        pw.received_at
+
+    FOR UPDATE OF pw
+    SKIP LOCKED
+
     LIMIT 1
 )
-UPDATE payment_webhooks
+
+UPDATE payment_webhooks AS pw
 SET
     processing_status = 'processing',
-    processing_attempts = processing_attempts + 1,
-    processed_at = NULL,
-    last_error = NULL
-WHERE id = (
-    SELECT id
-    FROM next_webhook
-)
-RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at
+
+    processing_attempts =
+        pw.processing_attempts + 1,
+
+    processing_started_at =
+        NOW(),
+
+    next_retry_at =
+        NULL
+
+FROM next_webhook AS nw
+
+WHERE pw.id = nw.id
+
+RETURNING pw.id, pw.provider, pw.provider_event_id, pw.event_type, pw.headers, pw.payload, pw.processing_status, pw.processing_attempts, pw.last_error, pw.received_at, pw.processed_at, pw.processing_started_at, pw.next_retry_at
 `
 
-func (q *Queries) ClaimPendingPaymentWebhook(ctx context.Context) (PaymentWebhook, error) {
-	row := q.db.QueryRow(ctx, claimPendingPaymentWebhook)
+type ClaimNextPaymentWebhookParams struct {
+	MaxAttempts         int32
+	StaleTimeoutSeconds interface{}
+}
+
+func (q *Queries) ClaimNextPaymentWebhook(ctx context.Context, arg ClaimNextPaymentWebhookParams) (PaymentWebhook, error) {
+	row := q.db.QueryRow(ctx, claimNextPaymentWebhook, arg.MaxAttempts, arg.StaleTimeoutSeconds)
 	var i PaymentWebhook
 	err := row.Scan(
 		&i.ID,
@@ -48,6 +101,8 @@ func (q *Queries) ClaimPendingPaymentWebhook(ctx context.Context) (PaymentWebhoo
 		&i.LastError,
 		&i.ReceivedAt,
 		&i.ProcessedAt,
+		&i.ProcessingStartedAt,
+		&i.NextRetryAt,
 	)
 	return i, err
 }
@@ -92,8 +147,42 @@ func (q *Queries) CreatePaymentWebhook(ctx context.Context, arg CreatePaymentWeb
 	return err
 }
 
+const failExhaustedStalePaymentWebhooks = `-- name: FailExhaustedStalePaymentWebhooks :execrows
+UPDATE payment_webhooks
+SET
+    processing_status = 'failed',
+    processing_started_at = NULL,
+    next_retry_at = NULL,
+    processed_at = NULL,
+    last_error =
+        'payment webhook processing exceeded maximum attempts after worker interruption'
+WHERE
+    processing_status = 'processing'
+    AND processing_started_at IS NOT NULL
+    AND processing_started_at <=
+        NOW() - (
+            $1
+            * INTERVAL '1 second'
+        )
+    AND processing_attempts >=
+        $2
+`
+
+type FailExhaustedStalePaymentWebhooksParams struct {
+	StaleTimeoutSeconds interface{}
+	MaxAttempts         int32
+}
+
+func (q *Queries) FailExhaustedStalePaymentWebhooks(ctx context.Context, arg FailExhaustedStalePaymentWebhooksParams) (int64, error) {
+	result, err := q.db.Exec(ctx, failExhaustedStalePaymentWebhooks, arg.StaleTimeoutSeconds, arg.MaxAttempts)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getPaymentWebhook = `-- name: GetPaymentWebhook :one
-SELECT id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at
+SELECT id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at, processing_started_at, next_retry_at
 FROM payment_webhooks
 WHERE
     provider = $1
@@ -122,6 +211,8 @@ func (q *Queries) GetPaymentWebhook(ctx context.Context, arg GetPaymentWebhookPa
 		&i.LastError,
 		&i.ReceivedAt,
 		&i.ProcessedAt,
+		&i.ProcessingStartedAt,
+		&i.NextRetryAt,
 	)
 	return i, err
 }
@@ -131,18 +222,21 @@ UPDATE payment_webhooks
 SET
     processing_status = 'failed',
     last_error = $2,
-    processed_at = NOW()
+    processed_at = NULL,
+    processing_started_at = NULL,
+    next_retry_at = $3
 WHERE id = $1
-RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at
+RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at, processing_started_at, next_retry_at
 `
 
 type MarkPaymentWebhookFailedParams struct {
-	ID        pgtype.UUID
-	LastError pgtype.Text
+	ID          pgtype.UUID
+	LastError   pgtype.Text
+	NextRetryAt pgtype.Timestamptz
 }
 
 func (q *Queries) MarkPaymentWebhookFailed(ctx context.Context, arg MarkPaymentWebhookFailedParams) (PaymentWebhook, error) {
-	row := q.db.QueryRow(ctx, markPaymentWebhookFailed, arg.ID, arg.LastError)
+	row := q.db.QueryRow(ctx, markPaymentWebhookFailed, arg.ID, arg.LastError, arg.NextRetryAt)
 	var i PaymentWebhook
 	err := row.Scan(
 		&i.ID,
@@ -156,6 +250,8 @@ func (q *Queries) MarkPaymentWebhookFailed(ctx context.Context, arg MarkPaymentW
 		&i.LastError,
 		&i.ReceivedAt,
 		&i.ProcessedAt,
+		&i.ProcessingStartedAt,
+		&i.NextRetryAt,
 	)
 	return i, err
 }
@@ -165,9 +261,11 @@ UPDATE payment_webhooks
 SET
     processing_status = 'processed',
     processed_at = NOW(),
+    processing_started_at = NULL,
+    next_retry_at = NULL,
     last_error = NULL
 WHERE id = $1
-RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at
+RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at, processing_started_at, next_retry_at
 `
 
 func (q *Queries) MarkPaymentWebhookProcessed(ctx context.Context, id pgtype.UUID) (PaymentWebhook, error) {
@@ -185,6 +283,8 @@ func (q *Queries) MarkPaymentWebhookProcessed(ctx context.Context, id pgtype.UUI
 		&i.LastError,
 		&i.ReceivedAt,
 		&i.ProcessedAt,
+		&i.ProcessingStartedAt,
+		&i.NextRetryAt,
 	)
 	return i, err
 }
@@ -200,7 +300,7 @@ SET
 WHERE 
     id = $1
     AND processing_status = 'pending'
-RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at
+RETURNING id, provider, provider_event_id, event_type, headers, payload, processing_status, processing_attempts, last_error, received_at, processed_at, processing_started_at, next_retry_at
 `
 
 func (q *Queries) MarkPaymentWebhookProcessing(ctx context.Context, id pgtype.UUID) (PaymentWebhook, error) {
@@ -218,6 +318,8 @@ func (q *Queries) MarkPaymentWebhookProcessing(ctx context.Context, id pgtype.UU
 		&i.LastError,
 		&i.ReceivedAt,
 		&i.ProcessedAt,
+		&i.ProcessingStartedAt,
+		&i.NextRetryAt,
 	)
 	return i, err
 }
