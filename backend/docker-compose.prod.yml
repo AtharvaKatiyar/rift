@@ -5,6 +5,12 @@ services:
 
     restart: unless-stopped
 
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
     environment:
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
@@ -28,9 +34,15 @@ services:
 
 
   redis:
-    image: redis:7
+    image: redis:7.4
 
     restart: unless-stopped
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
     command:
       [
@@ -63,6 +75,12 @@ services:
       dockerfile: Dockerfile
 
     restart: unless-stopped
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
     stop_grace_period: 30s
 
@@ -101,21 +119,35 @@ services:
 
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.29-alpine
 
     restart: unless-stopped
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
     depends_on:
       - backend
 
     ports:
-      - "8081:80"
+      - "80:80"
+      - "443:443"
 
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
 
     networks:
       - rift-prod-network
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 
 volumes:
