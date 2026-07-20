@@ -298,6 +298,10 @@ func main() {
 		healthHandler.Health,
 	)
 
+	router.HEAD("/health", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
 	router.GET(
 		"/metrics",
 		metricsHandler.Metrics,
