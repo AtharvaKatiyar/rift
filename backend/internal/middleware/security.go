@@ -32,10 +32,6 @@ func SecurityHeaders() gin.HandlerFunc {
 			"Permissions-Policy",
 			"camera=(), microphone=(), geolocation=()",
 		)
-		c.Header(
-			"Strict-Transport-Security",
-			"max-age=31536000; includeSubDomains",
-		)
 
 		c.Next()
 	}
