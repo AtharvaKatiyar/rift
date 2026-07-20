@@ -138,6 +138,8 @@ services:
 
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/ssl/cloudflare/origin.crt:/etc/ssl/cloudflare/origin.crt:ro
+      - /etc/ssl/cloudflare/origin.key:/etc/ssl/cloudflare/origin.key:ro
 
     networks:
       - rift-prod-network
