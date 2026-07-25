@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rift — A permanent link for every task</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#EEE6DA;
+    --cream-2:#F6F1E7;
+    --stone:#7C8578;
+    --ink:#2A2724;
+    --ink-soft:#5B564F;
+    --gold:#C79A3E;
+    --terracotta:#A6503B;
+    --indigo:#4C5A78;
+    --sage:#6E7C5C;
+    --violet:#7C6E92;
+    --line: rgba(42,39,36,0.14);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--cream-2);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none;}
+  img{display:block;max-width:100%;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  h1,h2,h3{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 32px;
+  }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:fixed;
+    top:0;left:0;right:0;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:24px 40px;
+  }
+  .nav-wordmark{
+    font-family:'Fraunces',serif;
+    font-size:21px;
+    font-weight:600;
+    letter-spacing:-0.02em;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .nav-wordmark svg{width:15px;height:17px;}
+  .nav-links{
+    display:flex;
+    align-items:center;
+    gap:36px;
+    font-size:14.5px;
+    color:var(--ink-soft);
+  }
+  .nav-links a{transition:color .2s;}
+  .nav-links a:hover{color:var(--ink);}
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:14px;
+    font-weight:500;
+    padding:10px 20px;
+    border-radius:2px;
+    transition:all .2s ease;
+    border:1px solid transparent;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn-primary{
+    background:var(--ink);
+    color:var(--cream-2);
+  }
+  .btn-primary:hover{background:var(--terracotta);}
+  .btn-ghost{
+    border:1px solid var(--line);
+    color:var(--ink);
+  }
+  .btn-ghost:hover{border-color:var(--ink);}
+  .btn-ghost.on-image{
+    border-color:rgba(42,39,36,0.28);
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    min-height:100vh;
+    overflow:hidden;
+    background-image:url('rift-hero.png');
+    background-size:cover;
+    background-position:center 35%;
+  }
+  .hero-ov-top{
+    position:absolute;
+    top:0;left:0;right:0;
+    height:52%;
+    background:linear-gradient(180deg, rgba(238,230,218,0.08) 0%, transparent 100%);
+    z-index:1;
+  }
+  .hero-ov-bot{
+    position:absolute;
+    bottom:0;left:0;right:0;
+    height:56%;
+    background:linear-gradient(0deg, rgba(22,20,16,0.72) 0%, rgba(22,20,16,0.38) 60%, transparent 100%);
+    z-index:1;
+  }
+  .hero-ov-sides{
+    position:absolute;
+    inset:0;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(22,20,16,0.22) 100%);
+    z-index:1;
+  }
+  .hero-nav{
+    position:absolute;
+    top:0;left:0;right:0;
+    z-index:5;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:24px 36px;
+  }
+  .hero-logo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .hero-logo img{
+    height:24px;
+    filter:brightness(0) saturate(100%);
+    opacity:0.85;
+  }
+  .hero-wordmark{
+    font-family:'Fraunces',serif;
+    font-size:17px;
+    font-weight:300;
+    color:#2A2724;
+    letter-spacing:0.05em;
+  }
+  .hero-nav-mid{
+    display:flex;
+    gap:30px;
+  }
+  .hero-nav-mid a{
+    font-size:13px;
+    color:rgba(42,39,36,0.6);
+    transition:color .2s;
+  }
+  .hero-nav-mid a:hover{color:#2A2724;}
+  .hero-nav-cta{
+    font-size:13px;
+    font-weight:500;
+    color:#1E1C18;
+    background:rgba(242,237,227,0.82);
+    border:1px solid rgba(42,39,36,0.14);
+    padding:9px 18px;
+    border-radius:2px;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    white-space:nowrap;
+  }
+  .hero-content{
+    position:absolute;
+    bottom:0;left:0;right:0;
+    z-index:5;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    padding:0 36px 38px;
+    gap:24px;
+  }
+  .hero-left{max-width:460px;}
+  .hero-eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:rgba(245,240,232,0.45);
+    margin-bottom:14px;
+  }
+  .hero h1{
+    font-size:clamp(40px,6vw,54px);
+    line-height:1.07;
+    color:#F5F0E8;
+    margin-bottom:16px;
+    text-shadow:0 2px 40px rgba(12,10,8,0.35);
+  }
+  .hero h1 em{font-style:italic;}
+  .hero h1 .dim{opacity:0.55;}
+  .hero-sub{
+    font-size:14px;
+    color:rgba(245,240,232,0.58);
+    line-height:1.68;
+    max-width:380px;
+    margin-bottom:28px;
+  }
+  .hero-actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .hero-btn-primary{
+    background:#F5F0E8;
+    color:#1E1C18;
+    font-size:13px;
+    font-weight:500;
+    padding:12px 22px;
+    border-radius:2px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .hero-btn-secondary{
+    border:1px solid rgba(245,240,232,0.28);
+    color:rgba(245,240,232,0.75);
+    font-size:13px;
+    padding:12px 20px;
+    border-radius:2px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .hero-right{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:16px;
+    padding-bottom:2px;
+  }
+  .hero-url-hint{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:rgba(245,240,232,0.28);
+    letter-spacing:0.04em;
+    text-align:right;
+    line-height:1.7;
+  }
+  .hero-url-hint .hi{color:rgba(245,240,232,0.52);}
+  .hero-scroll-line{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .hero-scroll-text{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:rgba(245,240,232,0.28);
+    writing-mode:vertical-rl;
+  }
+  .hero-scroll-tick{
+    width:1px;
+    height:32px;
+    background:rgba(245,240,232,0.18);
+  }
+  .hero-horizon{
+    position:absolute;
+    left:0;right:0;
+    z-index:4;
+    top:51.5%;
+    height:1px;
+    background:rgba(245,240,232,0.1);
+  }
+  .hero-horizon-dot{
+    position:absolute;
+    left:36px;
+    top:-3px;
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    border:1px solid rgba(245,240,232,0.22);
+  }
+
+  /* ---------- HORIZON RULE (signature device) ---------- */
+  .horizon{
+    position:relative;
+    height:1px;
+    background:var(--line);
+    width:100%;
+  }
+  .horizon-label{
+    position:absolute;
+    top:-11px;
+    left:32px;
+    background:var(--cream-2);
+    padding:0 10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+  }
+
+  /* ---------- ANATOMY ---------- */
+  .anatomy{
+    padding:130px 0 110px;
+    background:var(--cream-2);
+    text-align:center;
+  }
+  .anatomy .eyebrow{color:var(--indigo);}
+  .anatomy h2{
+    font-size:clamp(28px,3.6vw,38px);
+    max-width:600px;
+    margin:0 auto 60px;
+    line-height:1.2;
+  }
+  .anatomy-link{
+    display:inline-flex;
+    align-items:baseline;
+    font-family:'JetBrains Mono',monospace;
+    font-size:clamp(18px,3vw,28px);
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:2px;
+  }
+  .anatomy-link .part{position:relative;padding:0 2px;}
+  .anatomy-link .domain{color:var(--ink-soft);}
+  .anatomy-link .slug{color:var(--terracotta);font-weight:500;}
+  .anatomy-link .id{color:var(--indigo);font-weight:500;}
+  .anatomy-link .slash{color:var(--ink-soft);opacity:0.5;}
+  .anatomy-labels{
+    display:flex;
+    justify-content:center;
+    gap:48px;
+    margin-top:34px;
+    flex-wrap:wrap;
+    max-width:640px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .anatomy-labels div{
+    max-width:170px;
+    font-size:13px;
+    color:var(--ink-soft);
+    line-height:1.55;
+  }
+  .anatomy-labels .tag{
+    display:block;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .anatomy-labels .tag.domain-c{color:var(--ink-soft);}
+  .anatomy-labels .tag.slug-c{color:var(--terracotta);}
+  .anatomy-labels .tag.id-c{color:var(--indigo);}
+
+  /* ---------- TASKS DEMO ---------- */
+  .tasks{
+    padding:0 0 150px;
+    background:var(--cream-2);
+  }
+  .tasks-head{
+    text-align:center;
+    max-width:600px;
+    margin:0 auto 60px;
+  }
+  .tasks-head .eyebrow{color:var(--sage);}
+  .tasks-head h2{
+    font-size:clamp(28px,3.6vw,38px);
+    line-height:1.2;
+  }
+  .tasks-head p{
+    color:var(--ink-soft);
+    font-size:15px;
+    margin-top:14px;
+    line-height:1.6;
+  }
+
+  .tgrid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  .tcard{
+    background:var(--cream-2);
+    padding:32px 28px;
+  }
+  .tcard .tname{
+    font-family:'Fraunces',serif;
+    font-size:19px;
+    font-weight:500;
+    margin-bottom:14px;
+  }
+  .tcard .tlink{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    word-break:break-all;
+    margin-bottom:20px;
+    line-height:1.5;
+  }
+  .tcard .tlink .slug{color:var(--terracotta);}
+  .tcard .tdest{
+    position:relative;
+    height:44px;
+    border-top:1px solid var(--line);
+    padding-top:14px;
+  }
+  .tcard .tdest span{
+    position:absolute;
+    top:14px;left:0;
+    font-size:13.5px;
+    color:var(--ink);
+    opacity:0;
+    transition:opacity .6s ease;
+  }
+  .tcard .tdest span.active{opacity:1;}
+  .tcard .tdest .arrow{color:var(--stone);margin-right:6px;}
+  .tcard:nth-child(1) .tname{border-left:3px solid var(--gold);padding-left:12px;margin-left:-15px;}
+  .tcard:nth-child(2) .tname{border-left:3px solid var(--terracotta);padding-left:12px;margin-left:-15px;}
+  .tcard:nth-child(3) .tname{border-left:3px solid var(--indigo);padding-left:12px;margin-left:-15px;}
+
+  .tasks-note{
+    text-align:center;
+    margin-top:44px;
+    font-size:14px;
+    color:var(--ink-soft);
+    max-width:460px;
+    margin-left:auto;
+    margin-right:auto;
+    line-height:1.6;
+  }
+
+  /* ---------- FEATURES ---------- */
+  .features{
+    padding:0 0 150px;
+    background:var(--cream-2);
+  }
+  .features-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom:60px;
+    gap:40px;
+    flex-wrap:wrap;
+  }
+  .features-head h2{
+    font-size:clamp(28px,3.6vw,38px);
+    max-width:460px;
+    line-height:1.15;
+  }
+  .features-head p{
+    color:var(--ink-soft);
+    max-width:340px;
+    font-size:15px;
+    line-height:1.6;
+  }
+  .fgrid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  .fcard{
+    background:var(--cream-2);
+    padding:36px 30px 32px;
+    position:relative;
+  }
+  .fcard::before{
+    content:"";
+    position:absolute;
+    top:0;left:0;
+    width:26px;
+    height:3px;
+  }
+  .fcard:nth-child(1)::before{background:var(--gold);}
+  .fcard:nth-child(2)::before{background:var(--terracotta);}
+  .fcard:nth-child(3)::before{background:var(--indigo);}
+  .fcard:nth-child(4)::before{background:var(--sage);}
+  .fcard:nth-child(5)::before{background:var(--violet);}
+  .fcard:nth-child(6)::before{background:var(--gold);}
+  .fcard h3{
+    font-size:19px;
+    font-weight:500;
+    margin:20px 0 10px;
+  }
+  .fcard p{
+    font-size:14px;
+    color:var(--ink-soft);
+    line-height:1.65;
+  }
+
+  /* ---------- ROADMAP ---------- */
+  .roadmap{
+    padding:130px 0;
+    background:var(--cream);
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .roadmap-head{
+    text-align:center;
+    max-width:520px;
+    margin:0 auto 50px;
+  }
+  .roadmap-head .eyebrow{color:var(--violet);}
+  .roadmap-head h2{
+    font-size:clamp(26px,3.4vw,34px);
+  }
+  .rgrid{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:14px;
+    max-width:760px;
+    margin:0 auto;
+  }
+  .rpill{
+    border:1px solid var(--line);
+    border-radius:30px;
+    padding:12px 24px;
+    font-size:14.5px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--ink-soft);
+    background:var(--cream-2);
+  }
+  .rpill .dot{
+    width:6px;height:6px;
+    border-radius:50%;
+  }
+  .rpill:nth-child(1) .dot{background:var(--gold);}
+  .rpill:nth-child(2) .dot{background:var(--terracotta);}
+  .rpill:nth-child(3) .dot{background:var(--indigo);}
+  .rpill:nth-child(4) .dot{background:var(--sage);}
+  .rpill:nth-child(5) .dot{background:var(--violet);}
+
+  /* ---------- CTA / FOOTER ---------- */
+  .cta{
+    padding:150px 0 0;
+    background:var(--cream-2);
+    text-align:center;
+  }
+  .cta h2{
+    font-size:clamp(32px,4.6vw,52px);
+    line-height:1.1;
+    max-width:680px;
+    margin:0 auto 34px;
+  }
+  .cta h2 em{font-style:italic;color:var(--terracotta);}
+  .cta-actions{
+    display:flex;
+    justify-content:center;
+    gap:14px;
+    margin-bottom:110px;
+  }
+  footer{
+    border-top:1px solid var(--line);
+    padding:34px 0;
+  }
+  .foot-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:13px;
+    color:var(--ink-soft);
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  .foot-links{display:flex;gap:26px;}
+
+  @media (max-width:860px){
+    .nav-links{display:none;}
+    .fgrid,.tgrid{grid-template-columns:1fr;}
+    .features-head{flex-direction:column;align-items:flex-start;}
+      .hero-nav{padding:20px 22px;}
+      .hero-nav-mid{display:none;}
+      .hero-content{
+        flex-direction:column;
+        align-items:flex-start;
+        padding:0 22px 28px;
+      }
+      .hero-right{
+        align-items:flex-start;
+        margin-top:12px;
+      }
+      .hero-url-hint{text-align:left;}
+      .hero-nav-cta{padding:8px 14px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-ov-top"></div>
+    <div class="hero-ov-bot"></div>
+    <div class="hero-ov-sides"></div>
+    <div class="hero-horizon"><div class="hero-horizon-dot"></div></div>
+
+    <div class="hero-nav">
+      <div class="hero-logo">
+        <img src="rift_off_logo.png" alt="Rift logo">
+        <span class="hero-wordmark">Rift</span>
+      </div>
+      <div class="hero-nav-mid">
+        <a href="#tasks">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#roadmap">Roadmap</a>
+      </div>
+      <a href="#" class="hero-nav-cta">Create a link</a>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-left">
+        <div class="hero-eyebrow">Central link management</div>
+        <h1>The address <em>stays.</em><br><span class="dim">The destination</span><br><em>moves.</em></h1>
+        <p class="hero-sub">One permanent link for every task you care about. Update where it points, as many times as you need. Nobody ever gets a broken link again.</p>
+        <div class="hero-actions">
+          <a href="#" class="hero-btn-primary">Create your first link</a>
+          <a href="#tasks" class="hero-btn-secondary">See how it works ↓</a>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="hero-url-hint">
+          <span class="hi">rift.dpdns.org/portfolio/</span>A7XK29M4PQ8L<br>
+          <span class="hi">rift.dpdns.org/resume/</span>F3JKP92MLX8A<br>
+          <span class="hi">rift.dpdns.org/startup/</span>Q8T2MN6PWK5Z
+        </div>
+        <div class="hero-scroll-line">
+          <div class="hero-scroll-text">scroll</div>
+          <div class="hero-scroll-tick"></div>
+        </div>
+      </div>
+  </div>
+</section>
+
+<div class="horizon"><span class="horizon-label">The public link never changes</span></div>
+
+<!-- ANATOMY -->
+<section class="anatomy">
+  <div class="wrap">
+    <div class="eyebrow">Anatomy of a link</div>
+    <h2>Two parts. One that's yours, one that's permanent.</h2>
+    <div class="anatomy-link">
+      <span class="part domain">rift.dpdns.org</span><span class="slash">/</span><span class="part slug">portfolio</span><span class="slash">/</span><span class="part id">A7XK29M4PQ8L</span>
+    </div>
+    <div class="anatomy-labels">
+      <div><span class="tag domain-c">Domain</span>Fixed. The same for every task, every user.</div>
+      <div><span class="tag slug-c">Slug</span>Yours to choose — memorable, and specific to this one task.</div>
+      <div><span class="tag id-c">Public ID</span>A random 12-character string. Guarantees your link is yours alone.</div>
+    </div>
+  </div>
+</section>
+
+<!-- TASKS -->
+<section class="tasks" id="tasks">
+  <div class="wrap">
+    <div class="tasks-head">
+      <div class="eyebrow">One link per task</div>
+      <h2>Every task gets its own link. Every link is independent.</h2>
+      <p>Updating where your portfolio link points has zero effect on your resume link, your startup link, or anything else you've created. Watch each one change on its own.</p>
+    </div>
+    <div class="tgrid">
+      <div class="tcard">
+        <div class="tname">Portfolio</div>
+        <div class="tlink"><span class="slug">rift.dpdns.org/portfolio/</span>A7XK29M4PQ8L</div>
+        <div class="tdest" data-card>
+          <span class="active"><span class="arrow">→</span>portfolio-v1.com</span>
+          <span><span class="arrow">→</span>portfolio-v2.com</span>
+          <span><span class="arrow">→</span>personal-website.com</span>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tname">Resume</div>
+        <div class="tlink"><span class="slug">rift.dpdns.org/resume/</span>F3JKP92MLX8A</div>
+        <div class="tdest" data-card>
+          <span class="active"><span class="arrow">→</span>drive.google.com/resume-v1</span>
+          <span><span class="arrow">→</span>drive.google.com/resume-v2</span>
+          <span><span class="arrow">→</span>notion.site/resume</span>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tname">Startup</div>
+        <div class="tlink"><span class="slug">rift.dpdns.org/startup/</span>Q8T2MN6PWK5Z</div>
+        <div class="tdest" data-card>
+          <span class="active"><span class="arrow">→</span>waitlist page</span>
+          <span><span class="arrow">→</span>beta page</span>
+          <span><span class="arrow">→</span>product launch</span>
+        </div>
+      </div>
+    </div>
+    <p class="tasks-note">Update any destination inside Rift and every copy of that one link — on a resume, a QR code, an old email — resolves to the new destination immediately.</p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="features-head">
+      <h2>Built around one job: keep the link, change what's behind it.</h2>
+      <p>Every feature exists to make that guarantee solid, even years and dozens of updates later.</p>
+    </div>
+    <div class="fgrid">
+      <div class="fcard">
+        <h3>One link, one task</h3>
+        <p>Each link you create is scoped to a single purpose and fully independent of every other link in your account.</p>
+      </div>
+      <div class="fcard">
+        <h3>Update anytime</h3>
+        <p>Swap a link's destination as often as you need. The public URL never changes, no matter how many times you edit it.</p>
+      </div>
+      <div class="fcard">
+        <h3>Custom slugs</h3>
+        <p>Choose a slug that names the task — /portfolio, /resume, /startup — Rift adds a unique public ID automatically.</p>
+      </div>
+      <div class="fcard">
+        <h3>Reserved-route protection</h3>
+        <p>Slugs like login, admin, and api are protected, so your links can never collide with the platform itself.</p>
+      </div>
+      <div class="fcard">
+        <h3>Fast, every time</h3>
+        <p>Links resolve quickly and consistently, whether they get five clicks a month or five thousand.</p>
+      </div>
+      <div class="fcard">
+        <h3>Full control, one dashboard</h3>
+        <p>Create, update, deactivate, or reactivate any of your links from a single place, any time you need to.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section class="roadmap" id="roadmap">
+  <div class="wrap">
+    <div class="roadmap-head">
+      <div class="eyebrow">Coming soon</div>
+      <h2>What's next for Rift</h2>
+    </div>
+    <div class="rgrid">
+      <div class="rpill"><span class="dot"></span>Click analytics per link</div>
+      <div class="rpill"><span class="dot"></span>QR codes for every link</div>
+      <div class="rpill"><span class="dot"></span>Team workspaces</div>
+      <div class="rpill"><span class="dot"></span>Custom domains</div>
+      <div class="rpill"><span class="dot"></span>Public API</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="wrap">
+    <h2>Give your next task<br>a link that <em>outlives it.</em></h2>
+    <div class="cta-actions">
+      <a href="#" class="btn btn-primary">Create your first link</a>
+      <a href="#" class="btn btn-ghost">Read the docs</a>
+    </div>
+  </div>
+  <footer>
+    <div class="wrap foot-row">
+      <div class="mono">rift.dpdns.org</div>
+      <div class="foot-links">
+        <a href="#tasks">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#roadmap">Roadmap</a>
+      </div>
+      <div>MIT Licensed</div>
+    </div>
+  </footer>
+</section>
+
+<script>
+  function cycle(container, interval){
+    const spans = container.querySelectorAll('span');
+    let i = 0;
+    setInterval(() => {
+      spans[i].classList.remove('active');
+      i = (i + 1) % spans.length;
+      spans[i].classList.add('active');
+    }, interval);
+  }
+  document.querySelectorAll('[data-card]').forEach((el, idx) => {
+    cycle(el, 3200 + idx * 400);
+  });
+</script>
+
+</body>
+</html>
