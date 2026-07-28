@@ -6,7 +6,10 @@ import (
 	"time"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
+	email "github.com/AtharvaKatiyar/rift/internal/email"
+	"go.uber.org/zap"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"strings"
 )
@@ -15,6 +18,8 @@ type Service struct {
 	Queries *db.Queries
 	DB      *pgxpool.Pool
 	Secret  string
+	Email	email.Service
+	FrontendURL	string
 }
 
 const (
@@ -184,21 +189,52 @@ func (s *Service) Register(
 	}
 
 	sessionCtx, cancel :=
-		tokenTimeoutContext(ctx)
+	tokenTimeoutContext(ctx)
 
 	defer cancel()
 
-	return s.createSession(
-		sessionCtx,
-		s.Queries,
-		SessionUser{
-			ID: user.ID,
-			Email: user.Email,
-		},
-		userAgent,
-		ipAddress,
+	accessToken,
+		refreshToken,
+		err :=
+		s.createSession(
+			sessionCtx,
+			s.Queries,
+			SessionUser{
+				ID:    user.ID,
+				Email: user.Email,
+			},
+			userAgent,
+			ipAddress,
+		)
 
-	)
+	if err != nil {
+		return "", "", err
+	}
+
+	go func() {
+
+		if err := s.SendVerificationEmail(
+			context.Background(),
+			SendVerificationEmailRequest{
+				Email: user.Email,
+			},
+		); err != nil {
+
+			logger.Log.Warn(
+				"failed to send verification email",
+				zap.String(
+					"email",
+					user.Email,
+				),
+				zap.Error(err),
+			)
+		}
+
+	}()
+
+	return accessToken,
+		refreshToken,
+		nil
 }
 
 func (s *Service) Login(
@@ -221,6 +257,9 @@ func (s *Service) Login(
 		req.Email,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
+
+		_=CheckPassword(DummyPasswordHash, req.Password)
+
 		return  "", "", errors.New(
 			"invalid credentials",
 		)
@@ -288,6 +327,609 @@ func (s *Service) Logout(
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *Service) ForgotPassword(
+	ctx context.Context,
+	req ForgotPasswordRequest,
+) error {
+
+	req.Email = strings.TrimSpace(
+		strings.ToLower(req.Email),
+	)
+
+	if err := ValidateEmail(
+		req.Email,
+	); err != nil {
+		return err
+	}
+
+	if err := CheckPassword(
+		DummyPasswordHash,
+		dummyPassword,
+	); err != nil {
+		return err
+	}
+
+	dbCtx,
+		cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+	user, err :=
+		s.Queries.GetUserByEmail(
+			dbCtx,
+			req.Email,
+		)
+
+	if errors.Is(
+		err,
+		pgx.ErrNoRows,
+	) {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	tx,
+		err :=
+		s.DB.BeginTx(
+			dbCtx,
+			pgx.TxOptions{},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = tx.Rollback(dbCtx)
+	}()
+
+	txQueries :=
+		s.Queries.WithTx(
+			tx,
+		)
+
+	err = txQueries.DeleteExpiredPasswordResetTokens(
+		dbCtx,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	err =
+		txQueries.DeletePasswordResetTokensForUser(
+			dbCtx,
+			user.ID,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	rawToken,
+		tokenHash,
+		err :=
+		GeneratePasswordResetToken()
+
+	if err != nil {
+		return err
+	}
+
+	err =
+		txQueries.CreatePasswordResetToken(
+			dbCtx,
+			db.CreatePasswordResetTokenParams{
+
+				UserID:
+					user.ID,
+
+				TokenHash:
+					tokenHash,
+
+				ExpiresAt: pgtype.Timestamptz{
+					Time: time.Now().UTC().Add(
+						PasswordResetTokenTTL,
+					),
+					Valid: true,
+				},
+			},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	err =
+		tx.Commit(
+			dbCtx,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	resetURL :=
+		s.FrontendURL +
+			"/reset-password?token=" +
+			rawToken
+
+	emailCtx,
+		cancel :=
+		context.WithTimeout(
+			context.Background(),
+			15*time.Second,
+		)
+
+	defer cancel()
+
+	err = s.Email.SendPasswordResetEmail(
+		emailCtx,
+		email.PasswordResetRequest{
+
+			To:
+				user.Email,
+
+			Name:
+				user.Username,
+
+			ResetURL:
+				resetURL,
+
+			ExpiryMinutes:
+				int(
+					PasswordResetTokenTTL.Minutes(),
+				),
+		},
+	)
+	if err != nil {
+		logger.Log.Error(
+			"failed to send password reset email",
+			zap.String("email", user.Email),
+			zap.Error(err),
+		)
+
+		return err
+	}
+	return nil
+}
+
+func (s *Service) ResetPassword(
+	ctx context.Context,
+	req ResetPasswordRequest,
+) error {
+	req.Token = strings.TrimSpace(req.Token)
+
+	if req.Token == "" {
+		return errors.New(
+			"invalid or expired reset token",
+		)
+	}
+
+	if err := ValidatePassword(
+		req.Password,
+	); err != nil {
+		return err
+	}
+
+	dbCtx,
+		cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+	tokenHash :=
+		HashPasswordResetToken(
+			req.Token,
+		)
+
+	resetToken,
+		err :=
+		s.Queries.GetValidPasswordResetToken(
+			dbCtx,
+			tokenHash,
+		)
+
+	if errors.Is(
+		err,
+		pgx.ErrNoRows,
+	) {
+
+		return errors.New(
+			"invalid or expired reset token",
+		)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	hashedPassword,
+		err :=
+		HashPassword(
+			req.Password,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	tx,
+		err :=
+		s.DB.BeginTx(
+			dbCtx,
+			pgx.TxOptions{},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = tx.Rollback(dbCtx)
+	}()
+
+	txQueries :=
+		s.Queries.WithTx(
+			tx,
+		)
+
+	if err := txQueries.DeleteExpiredPasswordResetTokens(
+		dbCtx,
+	); err != nil {
+		return err
+	}
+
+	err =
+		txQueries.UpdateUserPassword(
+			dbCtx,
+			db.UpdateUserPasswordParams{
+
+				ID:
+					resetToken.UserID,
+
+				PasswordHash:
+					pgtype.Text{
+						String: hashedPassword,
+						Valid:  true,
+					},
+			},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	err = txQueries.DeletePasswordResetToken(
+		dbCtx,
+		db.DeletePasswordResetTokenParams{
+			ID:     resetToken.ID,
+			UserID: resetToken.UserID,
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	err =
+		txQueries.DeletePasswordResetTokensForUser(
+			dbCtx,
+			resetToken.UserID,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	err =
+		txQueries.DeleteRefreshTokensByUser(
+			dbCtx,
+			resetToken.UserID,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	err =
+		tx.Commit(
+			dbCtx,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	logger.Log.Info(
+		"password reset completed",
+		zap.String("user_id", resetToken.UserID.String()),
+	)
+
+	return nil
+}
+
+func (s *Service) SendVerificationEmail(
+	ctx context.Context,
+	req SendVerificationEmailRequest,
+) error {
+
+	req.Email = strings.TrimSpace(
+		strings.ToLower(req.Email),
+	)
+
+	if err := ValidateEmail(
+		req.Email,
+	); err != nil {
+		return err
+	}
+
+	if err := CheckPassword(
+		DummyPasswordHash,
+		dummyPassword,
+	); err != nil {
+		return err
+	}
+
+	dbCtx,
+		cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+	user, err :=
+		s.Queries.GetUserByEmail(
+			dbCtx,
+			req.Email,
+		)
+
+	if errors.Is(
+		err,
+		pgx.ErrNoRows,
+	) {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if user.EmailVerified {
+		return nil
+	}
+
+	tx,
+		err :=
+		s.DB.BeginTx(
+			dbCtx,
+			pgx.TxOptions{},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = tx.Rollback(dbCtx)
+	}()
+
+	txQueries :=
+		s.Queries.WithTx(
+			tx,
+		)
+
+	if err := txQueries.DeleteExpiredEmailVerificationTokens(
+		dbCtx,
+	); err != nil {
+		return err
+	}
+
+	if err := txQueries.DeleteEmailVerificationTokensForUser(
+		dbCtx,
+		user.ID,
+	); err != nil {
+		return err
+	}
+
+	rawToken,
+		tokenHash,
+		err :=
+		GenerateEmailVerificationToken()
+
+	if err != nil {
+		return err
+	}
+
+	if err := txQueries.CreateEmailVerificationToken(
+		dbCtx,
+		db.CreateEmailVerificationTokenParams{
+
+			UserID: user.ID,
+
+			TokenHash: tokenHash,
+
+			ExpiresAt: pgtype.Timestamptz{
+				Time: time.Now().
+					UTC().
+					Add(
+						EmailVerificationTokenTTL,
+					),
+
+				Valid: true,
+			},
+		},
+	); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(
+		dbCtx,
+	); err != nil {
+		return err
+	}
+
+	verifyURL :=
+		s.FrontendURL +
+			"/verify-email?token=" +
+			rawToken
+
+	emailCtx,
+		cancel :=
+		context.WithTimeout(
+			context.Background(),
+			15*time.Second,
+		)
+
+	defer cancel()
+
+	err = s.Email.SendEmailVerificationEmail(
+		emailCtx,
+		email.EmailVerificationRequest{
+
+			To: user.Email,
+
+			Name: user.Username,
+
+			VerificationURL: verifyURL,
+
+			ExpiryHours: int(
+				EmailVerificationTokenTTL.Hours(),
+			),
+		},
+	)
+
+	if err != nil {
+
+		logger.Log.Error(
+			"failed to send verification email",
+			zap.String(
+				"email",
+				user.Email,
+			),
+			zap.Error(err),
+		)
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) VerifyEmail(
+	ctx context.Context,
+	req VerifyEmailRequest,
+) error {
+
+	req.Token = strings.TrimSpace(
+		req.Token,
+	)
+
+	if req.Token == "" {
+		return ErrInvalidVerificationToken
+	}
+
+	dbCtx,
+		cancel :=
+		dbTimeoutContext(ctx)
+
+	defer cancel()
+
+	tokenHash :=
+		HashEmailVerificationToken(
+			req.Token,
+		)
+
+	verifyToken,
+		err :=
+		s.Queries.GetValidEmailVerificationToken(
+			dbCtx,
+			tokenHash,
+		)
+
+	if errors.Is(
+		err,
+		pgx.ErrNoRows,
+	) {
+
+		return ErrInvalidVerificationToken
+	}
+
+	if err != nil {
+		return err
+	}
+
+	tx,
+		err :=
+		s.DB.BeginTx(
+			dbCtx,
+			pgx.TxOptions{},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = tx.Rollback(
+			dbCtx,
+		)
+	}()
+
+	txQueries :=
+		s.Queries.WithTx(
+			tx,
+		)
+
+	if err := txQueries.DeleteExpiredEmailVerificationTokens(
+		dbCtx,
+	); err != nil {
+		return err
+	}
+
+	if err := txQueries.VerifyUserEmail(
+		dbCtx,
+		verifyToken.UserID,
+	); err != nil {
+		return err
+	}
+
+	if err := txQueries.DeleteEmailVerificationToken(
+		dbCtx,
+		db.DeleteEmailVerificationTokenParams{
+			ID:     verifyToken.ID,
+			UserID: verifyToken.UserID,
+		},
+	); err != nil {
+		return err
+	}
+
+	if err := txQueries.DeleteEmailVerificationTokensForUser(
+		dbCtx,
+		verifyToken.UserID,
+	); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(
+		dbCtx,
+	); err != nil {
+		return err
+	}
+
+	logger.Log.Info(
+		"email verified",
+		zap.String(
+			"user_id",
+			verifyToken.UserID.String(),
+		),
+	)
 
 	return nil
 }

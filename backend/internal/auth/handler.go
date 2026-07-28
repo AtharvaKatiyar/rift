@@ -209,8 +209,8 @@ func (h *Handler) Me(
 		gin.H{
 			"id": user.ID,
 			"email": user.Email,
-			"username":
-				user.Username,
+			"username": user.Username,
+			"email_verified": user.EmailVerified,
 		},
 	)
 }
@@ -373,5 +373,188 @@ func (h *Handler) LogoutAll(
 		c,
 		http.StatusOK,
 		"logged out from all devices",
+	)
+}
+
+func (h *Handler) ForgotPassword(
+    c *gin.Context,
+) {
+
+    var req ForgotPasswordRequest
+
+    if err := c.ShouldBindJSON(&req); err != nil {
+
+        httpx.BadRequest(
+			c,
+			err,
+		)
+
+        return
+    }
+
+    err := h.Service.ForgotPassword(
+        c.Request.Context(),
+        req,
+    )
+
+    if err != nil {
+
+        httpx.InternalServerError(
+			c,
+			err,
+		)
+
+        return
+    }
+
+    httpx.Success(
+		c,
+		http.StatusOK,
+		"If an account exists for that email, a password reset link has been sent.",
+	)
+}
+
+func (h *Handler) ResetPassword(
+    c *gin.Context,
+) {
+
+    var req ResetPasswordRequest
+
+    if err := c.ShouldBindJSON(&req); err != nil {
+
+        c.JSON(
+            http.StatusBadRequest,
+            gin.H{
+                "error": err.Error(),
+            },
+        )
+
+        return
+    }
+
+    err := h.Service.ResetPassword(
+        c.Request.Context(),
+        req,
+    )
+
+    if err != nil {
+		if errors.Is(
+			err,
+			ErrInvalidResetToken,
+		) {
+
+			httpx.BadRequest(
+				c,
+				err,
+			)
+
+			return
+		}
+
+		httpx.InternalServerError(
+			c,
+			err,
+		)
+
+		return
+	}
+
+    c.JSON(
+        http.StatusOK,
+        gin.H{
+            "message": "Password reset successful.",
+        },
+    )
+}
+
+func (h *Handler) SendVerificationEmail(
+	c *gin.Context,
+) {
+
+	var req SendVerificationEmailRequest
+
+	if err := c.ShouldBindJSON(
+		&req,
+	); err != nil {
+
+		httpx.BadRequest(
+			c,
+			err,
+		)
+
+		return
+	}
+
+	err := h.Service.SendVerificationEmail(
+		c.Request.Context(),
+		req,
+	)
+
+	if err != nil {
+
+		httpx.InternalServerError(
+			c,
+			err,
+		)
+
+		return
+	}
+
+	httpx.Success(
+		c,
+		http.StatusOK,
+		"If an account exists for that email, a verification email has been sent.",
+	)
+}
+
+func (h *Handler) VerifyEmail(
+	c *gin.Context,
+) {
+
+	var req VerifyEmailRequest
+
+	if err := c.ShouldBindJSON(
+		&req,
+	); err != nil {
+
+		httpx.BadRequest(
+			c,
+			err,
+		)
+
+		return
+	}
+
+	err := h.Service.VerifyEmail(
+		c.Request.Context(),
+		req,
+	)
+
+	if err != nil {
+		if errors.Is(
+			err,
+			ErrInvalidVerificationToken,
+		) {
+
+			httpx.BadRequest(
+				c,
+				err,
+			)
+
+			return
+		}
+
+		httpx.InternalServerError(
+			c,
+			err,
+		)
+
+		return
+	}
+
+	httpx.Success(
+		c,
+		http.StatusOK,
+		"email verified successfully",
 	)
 }
