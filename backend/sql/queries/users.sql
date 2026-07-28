@@ -15,6 +15,7 @@ RETURNING id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at;
 
@@ -26,6 +27,7 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users
@@ -39,6 +41,7 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users
@@ -52,6 +55,7 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users
@@ -65,6 +69,7 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users

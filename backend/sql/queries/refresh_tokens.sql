@@ -53,3 +53,7 @@ SELECT *
 FROM refresh_tokens
 WHERE token_hash = $1
 FOR UPDATE;
+
+-- name: DeleteRefreshTokensByUser :exec
+DELETE FROM refresh_tokens
+WHERE user_id = $1;
