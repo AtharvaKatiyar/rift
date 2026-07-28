@@ -29,6 +29,8 @@ type Config struct {
 	DodoStarterProductID string
 	DodoProProductID	 string
 	DodoSuccessURL		 string
+	EmailFrom		string
+	ResendAPIKey	string
 }
 
 func LoadConfig() *Config {
@@ -96,6 +98,8 @@ func LoadConfig() *Config {
 		DodoStarterProductID: 	MustGetEnv("DODO_STARTER_PRODUCT_ID"),
 		DodoProProductID:     	MustGetEnv("DODO_PRO_PRODUCT_ID"),
 		DodoSuccessURL:       	MustGetEnv("DODO_SUCCESS_URL"),
+		EmailFrom:				MustGetEnv("EMAIL_FROM"),
+		ResendAPIKey:			MustGetEnv("RESEND_API_KEY"),
 		AppEnv:           		env,
 	}
 }
