@@ -28,6 +28,7 @@ RETURNING id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 `
@@ -40,7 +41,19 @@ type CreateUserParams struct {
 	ProfilePicture pgtype.Text
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+type CreateUserRow struct {
+	ID             pgtype.UUID
+	Email          string
+	Username       string
+	PasswordHash   pgtype.Text
+	GoogleID       pgtype.Text
+	ProfilePicture pgtype.Text
+	EmailVerified  bool
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.Username,
@@ -48,7 +61,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.GoogleID,
 		arg.ProfilePicture,
 	)
-	var i User
+	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -56,6 +69,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -69,15 +83,28 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users
 WHERE email = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID             pgtype.UUID
+	Email          string
+	Username       string
+	PasswordHash   pgtype.Text
+	GoogleID       pgtype.Text
+	ProfilePicture pgtype.Text
+	EmailVerified  bool
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -85,6 +112,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -98,15 +126,28 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users
 WHERE google_id = $1
 `
 
-func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID pgtype.Text) (User, error) {
+type GetUserByGoogleIDRow struct {
+	ID             pgtype.UUID
+	Email          string
+	Username       string
+	PasswordHash   pgtype.Text
+	GoogleID       pgtype.Text
+	ProfilePicture pgtype.Text
+	EmailVerified  bool
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID pgtype.Text) (GetUserByGoogleIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByGoogleID, googleID)
-	var i User
+	var i GetUserByGoogleIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -114,6 +155,7 @@ func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID pgtype.Text) (
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -127,15 +169,28 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users
 WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
+type GetUserByIDRow struct {
+	ID             pgtype.UUID
+	Email          string
+	Username       string
+	PasswordHash   pgtype.Text
+	GoogleID       pgtype.Text
+	ProfilePicture pgtype.Text
+	EmailVerified  bool
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -143,6 +198,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -156,15 +212,28 @@ SELECT id,
     password_hash,
     google_id,
     profile_picture,
+    email_verified,
     created_at,
     updated_at
 FROM users
 WHERE username = $1
 `
 
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+type GetUserByUsernameRow struct {
+	ID             pgtype.UUID
+	Email          string
+	Username       string
+	PasswordHash   pgtype.Text
+	GoogleID       pgtype.Text
+	ProfilePicture pgtype.Text
+	EmailVerified  bool
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
 	row := q.db.QueryRow(ctx, getUserByUsername, username)
-	var i User
+	var i GetUserByUsernameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -172,6 +241,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.PasswordHash,
 		&i.GoogleID,
 		&i.ProfilePicture,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

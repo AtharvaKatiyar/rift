@@ -245,6 +245,14 @@ type CentralLink struct {
 	DeletedAt  pgtype.Timestamptz
 }
 
+type EmailVerificationToken struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	TokenHash string
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
 type LinkAnalytic struct {
 	ID          pgtype.UUID
 	LinkID      pgtype.UUID
@@ -270,6 +278,14 @@ type LinkHistory struct {
 	OldTargetUrl string
 	NewTargetUrl string
 	ChangedAt    pgtype.Timestamptz
+}
+
+type PasswordResetToken struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	TokenHash string
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
 }
 
 type PaymentIntent struct {
@@ -322,6 +338,7 @@ type User struct {
 	ProfilePicture pgtype.Text
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
+	EmailVerified  bool
 }
 
 type UserSubscription struct {
