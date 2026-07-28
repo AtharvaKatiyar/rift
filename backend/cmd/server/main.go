@@ -27,6 +27,7 @@ import (
 	redirectpkg "github.com/AtharvaKatiyar/rift/internal/redirect"
 	subscriptionpkg "github.com/AtharvaKatiyar/rift/internal/subscriptions"
 	dodopayments "github.com/dodopayments/dodopayments-go"
+	emailpkg "github.com/AtharvaKatiyar/rift/internal/email"
 	"github.com/dodopayments/dodopayments-go/option"
 	"go.uber.org/zap"
 )
@@ -103,7 +104,19 @@ func main() {
 	}
 
 	queries := db.New(pgPool)
+	emailService, err :=
+		emailpkg.NewResendService(
+			cfg.ResendAPIKey,
+			cfg.EmailFrom,
+		)
 
+	if err != nil {
+
+		logger.Log.Fatal(
+			"email service initialization failed",
+			zap.Error(err),
+		)
+	}
 	clicksService :=
 		&clickspkg.Service{
 			Redis: redisClient,
@@ -150,6 +163,8 @@ func main() {
 		Queries: queries,
 		DB:      pgPool,
 		Secret:  cfg.JWTSecret,
+		Email:	 emailService,
+		FrontendURL: cfg.FrontendURL,
 	}
 
 	authHandler :=
@@ -307,31 +322,169 @@ func main() {
 		metricsHandler.Metrics,
 	)
 
+	router.GET("/test-email", func(c *gin.Context) {
+
+		err := emailService.SendPasswordResetEmail(
+			c.Request.Context(),
+			emailpkg.PasswordResetRequest{
+				To: "gijenel107@apdtax.com",
+
+				Name: "Atharva",
+
+				ResetURL: "https://rift.dpdns.org/reset-password?token=test-token-123",
+
+				ExpiryMinutes: 30,
+			},
+		)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Email sent successfully",
+		})
+	})
+
+	router.GET("/test-verify-email", func(c *gin.Context) {
+
+		err := emailService.SendEmailVerificationEmail(
+			c.Request.Context(),
+			emailpkg.EmailVerificationRequest{
+				To: "gijenel107@apdtax.com",
+
+				Name: "Atharva",
+
+				VerificationURL: "https://rift.dpdns.org/verify-email?token=test-token-123",
+
+				ExpiryHours: 24,
+			},
+		)
+
+		if err != nil {
+
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{
+					"error": err.Error(),
+				},
+			)
+
+			return
+		}
+
+		c.JSON(
+			http.StatusOK,
+			gin.H{
+				"message": "Verification email sent successfully",
+			},
+		)
+	})
+
 	api := router.Group("/api/v1")
 
 	authRoutes := api.Group("/auth")
 	{
 		authRoutes.POST(
 			"/register",
-			middleware.RateLimit(
+			middleware.AuthRateLimit(
 				redisClient,
-				10,
-				time.Minute,
-				"register",
+				middleware.AuthRateLimitConfig{
+					IPLimit:    10,
+					IdentifierLimit: 5,
+					PairLimit:  3,
+					Window:     time.Hour,
+					Prefix:     "register",
+					IdentifierField: middleware.IdentifierEmail,
+				},
 			),
 			authHandler.Register,
 		)
 
 		authRoutes.POST(
 			"/login",
-			middleware.RateLimit(
+			middleware.AuthRateLimit(
 				redisClient,
-				10,
-				time.Minute,
-				"login",
+				middleware.AuthRateLimitConfig{
+					IPLimit:    30,
+					IdentifierLimit: 8,
+					PairLimit:  5,
+					Window:     time.Minute,
+					Prefix:     "login",
+					IdentifierField: middleware.IdentifierEmail,
+				},
 			),
 			authHandler.Login,
 		)
+		authRoutes.POST(
+			"/forgot-password",
+			middleware.AuthRateLimit(
+				redisClient,
+				middleware.AuthRateLimitConfig{
+					IPLimit:    5,
+					IdentifierLimit: 3,
+					PairLimit:  2,
+					Window:     15 * time.Minute,
+					Prefix:     "forgot-password",
+					IdentifierField: middleware.IdentifierEmail,
+				},
+			),
+			authHandler.ForgotPassword,
+		)
+
+		authRoutes.POST(
+			"/reset-password",
+			middleware.AuthRateLimit(
+				redisClient,
+				middleware.AuthRateLimitConfig{
+					IPLimit:    10,
+					IdentifierLimit: 5,
+					PairLimit:  2,
+					Window:     15 * time.Minute,
+					Prefix:     "reset-password",
+					IdentifierField: middleware.IdentifierToken,
+				},
+			),
+			authHandler.ResetPassword,
+		)
+
+		authRoutes.POST(
+			"/verify-email/request",
+			middleware.AuthRateLimit(
+				redisClient,
+				middleware.AuthRateLimitConfig{
+					IPLimit:         5,
+					IdentifierLimit: 3,
+					PairLimit:       2,
+					Window:          15 * time.Minute,
+					Prefix:          "verify-email-request",
+
+					IdentifierField: middleware.IdentifierEmail,
+				},
+			),
+			authHandler.SendVerificationEmail,
+		)
+
+		authRoutes.POST(
+			"/verify-email",
+			middleware.AuthRateLimit(
+				redisClient,
+				middleware.AuthRateLimitConfig{
+					IPLimit:         10,
+					IdentifierLimit: 5,
+					PairLimit:       2,
+					Window:          15 * time.Minute,
+					Prefix:          "verify-email",
+
+					IdentifierField: middleware.IdentifierToken,
+				},
+			),
+			authHandler.VerifyEmail,
+		)
+
 		authRoutes.POST(
 			"/refresh",
 			middleware.RateLimit(
