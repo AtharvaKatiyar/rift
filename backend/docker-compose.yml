@@ -1,7 +1,9 @@
 services:
+
   postgres:
     image: postgres:17
-    restart: always
+
+    restart: unless-stopped
 
     environment:
       POSTGRES_USER: "${POSTGRES_USER}"
@@ -9,13 +11,10 @@ services:
       POSTGRES_DB: "${POSTGRES_DB}"
 
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "5432:5432"
 
     volumes:
-      - rift-postgres-data:/var/lib/postgresql/data
-
-    networks:
-      - rift-network
+      - rift-postgres-prod-data:/var/lib/postgresql/data
 
     healthcheck:
       test:
@@ -29,17 +28,20 @@ services:
 
 
   redis:
-    image: redis:7
-    restart: always
+    image: redis:7.4
 
-    ports:
-      - "${REDIS_PORT}:6379"
+    restart: unless-stopped
+
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes"
+      ]
+
 
     volumes:
-      - rift-redis-data:/data
-
-    networks:
-      - rift-network
+      - rift-redis-prod-data:/data
 
     healthcheck:
       test:
@@ -56,59 +58,47 @@ services:
   backend:
     build:
       context: .
-
       dockerfile: Dockerfile
 
-
-    restart: always
+    restart: unless-stopped
 
     depends_on:
       postgres:
-        condition:
-          service_healthy
+        condition: service_healthy
 
       redis:
-        condition:
-          service_healthy
-
-    # ports:
-    #   - "8080:8080"
+        condition: service_healthy
 
     env_file:
-      - .env.development
+      - .env
 
     environment:
       APP_ENV: development
 
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
+
       DOCKER_ENV: "true"
 
-    networks:
-      - rift-network
-
-  nginx:
-    image: nginx:alpine
-
-    restart: always
-
-    depends_on:
-      - backend
+      ENABLE_WORKERS: "true"
 
     ports:
-      - "8080:80"
+      - "8080:8080"
 
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-
-    networks:
-      - rift-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://localhost:8080/health"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
 
 volumes:
-  rift-postgres-data:
-  rift-redis-data:
+  rift-postgres-prod-data:
 
-
-networks:
-  rift-network:
+  rift-redis-prod-data:
