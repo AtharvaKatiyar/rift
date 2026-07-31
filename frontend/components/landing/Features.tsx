@@ -3,8 +3,13 @@ import { FEATURES } from "@/data/landing";
 
 function FeatureCard({ feature }: { feature: Feature }) {
   return (
-    <div className="relative" style={{ background: "var(--bg)", padding: "40px 32px 36px" }}>
-      <div style={{ position: "absolute", top: 0, left: 0, width: 32, height: 3, background: feature.color }} />
+    <div className="feature-card">
+      <div
+        className="feature-card-line"
+        style={{
+          background: feature.color,
+        }}
+      />
       <h3 className="font-serif" style={{ fontSize: 21, fontWeight: 500, margin: "16px 0 12px", color: "var(--text)" }}>{feature.title}</h3>
       <p className="font-sans" style={{ fontSize: 15.5, color: "var(--muted)", lineHeight: 1.7 }}>{feature.desc}</p>
     </div>
@@ -14,6 +19,24 @@ function FeatureCard({ feature }: { feature: Feature }) {
 export default function Features() {
   return (
     <section id="features" style={{ padding: "100px 48px 120px", background: "var(--bg)" }}>
+      <style>{`
+        .feature-card {
+          position: relative;
+          background: var(--bg);
+          padding: 40px 32px 36px;
+        }
+        .feature-card-line {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 26px;
+          height: 3px;
+          transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .feature-card:hover .feature-card-line {
+          width: 100%;
+        }
+      `}</style>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ marginBottom: 64 }}>
           <h2 className="font-serif" style={{ fontSize: "clamp(32px,4.5vw,48px)", lineHeight: 1.15, marginBottom: 20, color: "var(--text)" }}>

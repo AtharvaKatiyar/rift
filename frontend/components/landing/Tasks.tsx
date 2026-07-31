@@ -6,14 +6,14 @@ import { TASKS_DATA } from "@/data/landing";
 
 function TaskTimeline({ task }: { task: TaskData }) {
   return (
-    <div style={{ flex: 1, paddingLeft: 32 }}>
+    <div className="task-timeline-container" style={{ flex: 1, paddingLeft: 32 }}>
       {/* Permanent link section */}
       <div style={{ marginBottom: 32 }}>
         <div className="font-mono uppercase" style={{ fontSize: 11, letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 12 }}>
           Permanent link
         </div>
         <div
-          className="font-mono"
+          className="task-link-code font-mono"
           style={{
             fontSize: 14,
             padding: "12px 16px",
@@ -64,7 +64,7 @@ function TaskTimeline({ task }: { task: TaskData }) {
                         textTransform: "uppercase",
                         letterSpacing: "0.06em",
                         padding: "4px 10px",
-                        background: "rgba(166,80,59,0.12)",
+                        background: "color-mix(in srgb, var(--accent) 15%, transparent)",
                         color: "var(--accent)",
                         borderRadius: 2,
                         fontWeight: 500,
@@ -105,28 +105,29 @@ export default function Tasks() {
   }, []);
 
   return (
-    <section id="tasks" style={{ padding: "100px 48px 120px", background: "var(--bg-alt)" }}>
+    <section id="tasks" className="tasks-section" style={{ padding: "100px 48px 120px", background: "var(--bg-alt)" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         {/* Heading block */}
         <div style={{ marginBottom: 56 }}>
           <div className="font-mono uppercase" style={{ fontSize: 12, letterSpacing: "0.14em", color: "var(--muted)", marginBottom: 20 }}>
             One link per task
           </div>
-          <h2 className="font-serif" style={{ fontSize: "clamp(32px,4.5vw,48px)", lineHeight: 1.15, marginBottom: 20, fontWeight: 300, color: "var(--text)" }}>
+          <h2 className="tasks-heading font-serif" style={{ fontSize: "clamp(32px,4.5vw,48px)", lineHeight: 1.15, marginBottom: 20, fontWeight: 300, color: "var(--text)" }}>
             Every task gets its own link.<br />
             <em style={{ fontStyle: "italic" }}>Every link is independent.</em>
           </h2>
-          <p className="font-sans" style={{ fontSize: 17, color: "var(--muted)", lineHeight: 1.7, maxWidth: 720 }}>
+          <p className="tasks-subtext font-sans" style={{ fontSize: 17, color: "var(--muted)", lineHeight: 1.7, maxWidth: 720 }}>
             Updating your portfolio link has zero effect on your resume, startup, or anything else. Click any task to see its full history.
           </p>
         </div>
 
-        {/* Two columns */}
-        <div style={{ display: "flex", marginBottom: 32 }}>
+        {/* Two columns / Stacked on mobile */}
+        <div className="tasks-split-container" style={{ display: "flex", marginBottom: 32 }}>
           {/* Left column - task list */}
-          <div style={{ width: 220, position: "relative" }}>
-            <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 1, background: "var(--border)" }} />
+          <div className="tasks-list-sidebar" style={{ width: 220, position: "relative" }}>
+            <div className="tasks-vertical-divider" style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 1, background: "var(--border)" }} />
             <div
+              className="tasks-vertical-indicator"
               style={{
                 position: "absolute",
                 right: 0,
@@ -142,13 +143,14 @@ export default function Tasks() {
                 key={index}
                 data-task-index={index}
                 onClick={(e) => handleTaskClick(index, e)}
+                className={`task-item ${activeTask === index ? "is-active" : ""}`}
                 style={{ padding: "18px 0", cursor: "pointer" }}
               >
                 <div style={{ fontSize: 15, fontWeight: 500, color: activeTask === index ? "var(--text)" : "var(--muted)" }}>
                   {task.name}
                 </div>
                 <div
-                  className="font-mono"
+                  className="task-slug-sub font-mono"
                   style={{ fontSize: 11.5, marginTop: 6, opacity: activeTask === index ? 1 : 0, transition: "opacity 0.2s" }}
                 >
                   <span style={{ color: "var(--accent)" }}>{task.slug}</span>
@@ -169,6 +171,59 @@ export default function Tasks() {
           </p>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 768px) {
+          .tasks-section {
+            padding: 80px 20px 80px !important;
+          }
+          .tasks-heading {
+            font-size: clamp(22px, 6vw, 32px) !important;
+          }
+          .tasks-subtext {
+            font-size: 13.5px !important;
+          }
+          .tasks-split-container {
+            flex-direction: column !important;
+          }
+          .tasks-list-sidebar {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            gap: 0 !important;
+            border-bottom: 1px solid var(--border);
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+          .tasks-list-sidebar::-webkit-scrollbar {
+            display: none !important;
+          }
+          .tasks-vertical-divider,
+          .tasks-vertical-indicator {
+            display: none !important;
+          }
+          .task-item {
+            padding: 12px 16px !important;
+            white-space: nowrap !important;
+            border-bottom: 2px solid transparent !important;
+          }
+          .task-item.is-active {
+            border-bottom: 2px solid var(--accent) !important;
+          }
+          .task-slug-sub {
+            display: none !important;
+          }
+          .task-timeline-container {
+            width: 100% !important;
+            padding: 20px 0 0 !important;
+          }
+          .task-link-code {
+            font-size: 11px !important;
+            word-break: break-all !important;
+            white-space: normal !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

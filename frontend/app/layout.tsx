@@ -12,8 +12,14 @@ export const metadata: Metadata = {
    class is on <html> before React hydrates — no theme flicker on load. */
 const antiFlash = `
 try {
+  var p = window.location.pathname;
+  var isPublic = p === '/' || p === '/auth' || p === '';
   var t = localStorage.getItem('rift-theme');
-  if (t === 'dark') document.documentElement.classList.add('dark');
+  if (!isPublic && t === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
 } catch(e) {}
 `;
 
