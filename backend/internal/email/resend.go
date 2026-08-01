@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	texttemplate "text/template"
-
+	"github.com/AtharvaKatiyar/rift/internal/logger"
 	"github.com/resend/resend-go/v2"
 )
 
@@ -133,6 +133,9 @@ func (s *ResendService) SendEmailVerificationEmail(
 	ctx context.Context,
 	req EmailVerificationRequest,
 ) error {
+	logger.Log.Info(
+		"calling Resend SendEmailVerificationEmail",
+	)
 
 	var html bytes.Buffer
 

@@ -52,7 +52,8 @@ SET
     email_verified = TRUE,
     updated_at = NOW()
 WHERE
-    id = $1;
+    id = $1
+    AND email_verified = FALSE;
 
 -- name: IsUserEmailVerified :one
 SELECT email_verified

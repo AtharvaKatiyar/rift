@@ -123,6 +123,7 @@ SET
     updated_at = NOW()
 WHERE
     id = $1
+    AND email_verified = FALSE
 `
 
 func (q *Queries) VerifyUserEmail(ctx context.Context, id pgtype.UUID) error {

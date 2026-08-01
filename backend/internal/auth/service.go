@@ -213,6 +213,11 @@ func (s *Service) Register(
 
 	go func() {
 
+		logger.Log.Info(
+			"SendVerificationEmail called",
+			zap.String("email", req.Email),
+		)
+
 		if err := s.SendVerificationEmail(
 			context.Background(),
 			SendVerificationEmailRequest{
@@ -667,13 +672,6 @@ func (s *Service) SendVerificationEmail(
 
 	if err := ValidateEmail(
 		req.Email,
-	); err != nil {
-		return err
-	}
-
-	if err := CheckPassword(
-		DummyPasswordHash,
-		dummyPassword,
 	); err != nil {
 		return err
 	}
