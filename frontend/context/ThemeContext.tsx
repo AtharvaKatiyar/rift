@@ -21,7 +21,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(false);
 
   useLayoutEffect(() => {
-    const isPublicRoute = pathname === "/" || pathname === "/auth" || !pathname;
+    const publicPaths = ["/", "/auth", "/forgot-password", "/reset-password", "/verify-email", "/email-verified", "/email-verification-error"];
+    const isPublicRoute = !pathname || publicPaths.some((p) => pathname === p);
     if (isPublicRoute) {
       document.documentElement.classList.remove("dark");
       setIsDark(false);

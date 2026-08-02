@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "Rift — A permanent link for every task",
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
 const antiFlash = `
 try {
   var p = window.location.pathname;
-  var isPublic = p === '/' || p === '/auth' || p === '';
+  var isPublic = p === '/' || p === '/auth' || p === ''
+    || p === '/forgot-password' || p === '/reset-password'
+    || p === '/verify-email' || p === '/email-verified'
+    || p === '/email-verification-error';
   var t = localStorage.getItem('rift-theme');
   if (!isPublic && t === 'dark') {
     document.documentElement.classList.add('dark');
@@ -24,14 +28,16 @@ try {
 `;
 
 export default function RootLayout({
-  children, 
+  children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
         {/* must be before children so it runs before first paint */}
         <script dangerouslySetInnerHTML={{ __html: antiFlash }} />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
