@@ -11,8 +11,7 @@ import (
 const (
 	PasswordResetTokenBytes = 32
 
-	PasswordResetTokenTTL =
-		30 * time.Minute
+	PasswordResetTokenTTL = 30 * time.Minute
 )
 
 func GeneratePasswordResetToken() (

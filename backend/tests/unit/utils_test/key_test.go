@@ -14,8 +14,7 @@ func TestGeneratePublicKey(
 		name string
 	}{
 		{
-			name:
-				"generate key",
+			name: "generate key",
 		},
 	}
 

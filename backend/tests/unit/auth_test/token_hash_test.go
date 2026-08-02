@@ -16,28 +16,19 @@ func TestHashToken(
 		expectLen int
 	}{
 		{
-			name:
-				"normal token",
-			token:
-				"sample-refresh-token",
-			expectLen:
-				64,
+			name:      "normal token",
+			token:     "sample-refresh-token",
+			expectLen: 64,
 		},
 		{
-			name:
-				"empty token",
-			token:
-				"",
-			expectLen:
-				64,
+			name:      "empty token",
+			token:     "",
+			expectLen: 64,
 		},
 		{
-			name:
-				"long token",
-			token:
-				"this-is-a-very-long-refresh-token-used-for-testing-purposes",
-			expectLen:
-				64,
+			name:      "long token",
+			token:     "this-is-a-very-long-refresh-token-used-for-testing-purposes",
+			expectLen: 64,
 		},
 	}
 

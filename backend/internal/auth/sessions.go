@@ -10,7 +10,7 @@ import (
 )
 
 type SessionUser struct {
-	ID pgtype.UUID
+	ID    pgtype.UUID
 	Email string
 }
 
@@ -57,33 +57,24 @@ func (s *Service) createSession(
 	err = q.CreateRefreshToken(
 		dbCtx,
 		db.CreateRefreshTokenParams{
-			UserID: user.ID,
-			TokenHash:
-				hashedRefreshToken,
-			ExpiresAt:
-				pgtype.Timestamptz{
-					Time: time.Now().Add(
-						RefreshTokenDuration,
-					),
-					Valid: true,
-				},
+			UserID:    user.ID,
+			TokenHash: hashedRefreshToken,
+			ExpiresAt: pgtype.Timestamptz{
+				Time: time.Now().Add(
+					RefreshTokenDuration,
+				),
+				Valid: true,
+			},
 
-			UserAgent:
-				pgtype.Text{
-					String:
-						userAgent,
-					Valid:
-						userAgent != "",
-				},
+			UserAgent: pgtype.Text{
+				String: userAgent,
+				Valid:  userAgent != "",
+			},
 
-			IpAddress:
-				pgtype.Text{
-					String:
-						ipAddress,
-					Valid:
-						ipAddress != "",
-				},
-
+			IpAddress: pgtype.Text{
+				String: ipAddress,
+				Valid:  ipAddress != "",
+			},
 		},
 	)
 

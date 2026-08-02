@@ -9,8 +9,8 @@ type AnalyticsData struct {
 	City    string
 
 	Browser string
-	OS       string
-	Device   string
+	OS      string
+	Device  string
 
 	IPAddress string
 }

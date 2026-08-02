@@ -20,43 +20,32 @@ func TestRefreshSession(
 		expectError bool
 	}{
 		{
-			name:
-				"successful refresh",
-			setupLogin:
-				true,
-			expectError:
-				false,
+			name:        "successful refresh",
+			setupLogin:  true,
+			expectError: false,
 		},
 		{
-			name:
-				"invalid token",
-			setupLogin:
-				false,
-			refreshFunc:
-				func(
-					token string,
-				) string {
+			name:       "invalid token",
+			setupLogin: false,
+			refreshFunc: func(
+				token string,
+			) string {
 
-					return "invalid-token"
-				},
-			expectError:
-				true,
+				return "invalid-token"
+			},
+			expectError: true,
 		},
 		{
-			name:
-				"tampered token",
-			setupLogin:
-				true,
-			refreshFunc:
-				func(
-					token string,
-				) string {
+			name:       "tampered token",
+			setupLogin: true,
+			refreshFunc: func(
+				token string,
+			) string {
 
-					return token +
-						"tampered"
-				},
-			expectError:
-				true,
+				return token +
+					"tampered"
+			},
+			expectError: true,
 		},
 	}
 
@@ -79,12 +68,9 @@ func TestRefreshSession(
 						service.Register(
 							context.Background(),
 							authpkg.RegisterRequest{
-								Email:
-									"user@example.com",
-								Username:
-									"testuser",
-								Password:
-									"StrongPass123!",
+								Email:    "user@example.com",
+								Username: "testuser",
+								Password: "StrongPass123!",
 							},
 							"register-agent",
 							"127.0.0.1",
@@ -102,10 +88,8 @@ func TestRefreshSession(
 						service.Login(
 							context.Background(),
 							authpkg.LoginRequest{
-								Email:
-									"user@example.com",
-								Password:
-									"StrongPass123!",
+								Email:    "user@example.com",
+								Password: "StrongPass123!",
 							},
 							"login-agent",
 							"127.0.0.1",
@@ -241,12 +225,9 @@ func TestRefreshSession_RotatesToken(
 		service.Register(
 			context.Background(),
 			authpkg.RegisterRequest{
-				Email:
-					"user@example.com",
-				Username:
-					"testuser",
-				Password:
-					"StrongPass123!",
+				Email:    "user@example.com",
+				Username: "testuser",
+				Password: "StrongPass123!",
 			},
 			"register-agent",
 			"127.0.0.1",
@@ -264,10 +245,8 @@ func TestRefreshSession_RotatesToken(
 		service.Login(
 			context.Background(),
 			authpkg.LoginRequest{
-				Email:
-					"user@example.com",
-				Password:
-					"StrongPass123!",
+				Email:    "user@example.com",
+				Password: "StrongPass123!",
 			},
 			"login-agent",
 			"127.0.0.1",

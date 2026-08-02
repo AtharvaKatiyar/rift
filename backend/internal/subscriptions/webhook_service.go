@@ -17,7 +17,7 @@ func (
 	payload []byte,
 	headers WebhookHeaders,
 ) error {
- 
+
 	event, err :=
 		s.PaymentProvider.
 			ParseWebhook(

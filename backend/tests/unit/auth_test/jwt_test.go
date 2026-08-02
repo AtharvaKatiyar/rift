@@ -263,41 +263,34 @@ func TestValidateToken_ExpiredToken(
 
 	claims :=
 		auth.JWTClaims{
-			UserID:
-				"user-id",
+			UserID: "user-id",
 
-			Email:
-				"expired@test.com",
+			Email: "expired@test.com",
 
-			Type:
-				"access",
+			Type: "access",
 
-			RegisteredClaims:
-				jwt.RegisteredClaims{
-					ExpiresAt:
-						jwt.NewNumericDate(
-							now.Add(
-								-1 *
-									time.Hour,
-							),
-						),
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(
+					now.Add(
+						-1 *
+							time.Hour,
+					),
+				),
 
-					IssuedAt:
-						jwt.NewNumericDate(
-							now.Add(
-								-2 *
-									time.Hour,
-							),
-						),
+				IssuedAt: jwt.NewNumericDate(
+					now.Add(
+						-2 *
+							time.Hour,
+					),
+				),
 
-					NotBefore:
-						jwt.NewNumericDate(
-							now.Add(
-								-2 *
-									time.Hour,
-							),
-						),
-				},
+				NotBefore: jwt.NewNumericDate(
+					now.Add(
+						-2 *
+							time.Hour,
+					),
+				),
+			},
 		}
 
 	token :=

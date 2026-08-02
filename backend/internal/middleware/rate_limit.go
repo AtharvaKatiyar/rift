@@ -36,8 +36,7 @@ func RateLimit(
 			c.JSON(
 				http.StatusInternalServerError,
 				gin.H{
-					"error":
-						"rate limiter unavailable",
+					"error": "rate limiter unavailable",
 				},
 			)
 
@@ -59,8 +58,7 @@ func RateLimit(
 				c.JSON(
 					http.StatusInternalServerError,
 					gin.H{
-						"error":
-							"rate limiter unavailable",
+						"error": "rate limiter unavailable",
 					},
 				)
 
@@ -74,8 +72,7 @@ func RateLimit(
 			c.JSON(
 				http.StatusTooManyRequests,
 				gin.H{
-					"error":
-						"rate limit exceeded",
+					"error": "rate limit exceeded",
 				},
 			)
 

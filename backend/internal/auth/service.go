@@ -3,36 +3,34 @@ package auth
 import (
 	"context"
 	"errors"
-	"time"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/AtharvaKatiyar/rift/internal/logger"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	email "github.com/AtharvaKatiyar/rift/internal/email"
-	"go.uber.org/zap"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 	"strings"
+	"time"
 )
 
 type Service struct {
-	Queries *db.Queries
-	DB      *pgxpool.Pool
-	Secret  string
-	Email	email.Service
-	FrontendURL	string
+	Queries     *db.Queries
+	DB          *pgxpool.Pool
+	Secret      string
+	Email       email.Service
+	FrontendURL string
 }
 
 const (
-	authDBTimeout =
-		3 * time.Second
+	authDBTimeout = 3 * time.Second
 
-	authTokenTimeout =
-		2 * time.Second
+	authTokenTimeout = 2 * time.Second
 )
 
-func (s *Service) Register( 
-	ctx context.Context, 
-	req RegisterRequest, 
+func (s *Service) Register(
+	ctx context.Context,
+	req RegisterRequest,
 	userAgent string,
 	ipAddress string,
 ) (string, string, error) {
@@ -47,7 +45,7 @@ func (s *Service) Register(
 
 	err := ValidateUsername(req.Username)
 	if err != nil {
-		return "","", err
+		return "", "", err
 	}
 
 	err = ValidatePassword(req.Password)
@@ -71,13 +69,13 @@ func (s *Service) Register(
 	)
 
 	if err == nil {
-		return "","", errors.New(
+		return "", "", errors.New(
 			"user already exists",
 		)
 	}
 
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return "","", err
+		return "", "", err
 	}
 
 	usernameCtx, cancel :=
@@ -91,13 +89,13 @@ func (s *Service) Register(
 	)
 
 	if err == nil {
-		return "","", errors.New(
+		return "", "", errors.New(
 			"username already taken",
 		)
 	}
 
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return "","", err
+		return "", "", err
 	}
 
 	hashedPassword, err := HashPassword(
@@ -105,7 +103,7 @@ func (s *Service) Register(
 	)
 
 	if err != nil {
-		return "","", err
+		return "", "", err
 	}
 
 	createCtx, cancel :=
@@ -136,32 +134,23 @@ func (s *Service) Register(
 		txQueries.CreateUser(
 			createCtx,
 			db.CreateUserParams{
-				Email:
-					req.Email,
+				Email: req.Email,
 
-				Username:
-					req.Username,
+				Username: req.Username,
 
-				PasswordHash:
-					pgtype.Text{
-						String:
-							hashedPassword,
+				PasswordHash: pgtype.Text{
+					String: hashedPassword,
 
-						Valid:
-							true,
-					},
+					Valid: true,
+				},
 
-				GoogleID:
-					pgtype.Text{
-						Valid:
-							false,
-					},
+				GoogleID: pgtype.Text{
+					Valid: false,
+				},
 
-				ProfilePicture:
-					pgtype.Text{
-						Valid:
-							false,
-					},
+				ProfilePicture: pgtype.Text{
+					Valid: false,
+				},
 			},
 		)
 
@@ -189,7 +178,7 @@ func (s *Service) Register(
 	}
 
 	sessionCtx, cancel :=
-	tokenTimeoutContext(ctx)
+		tokenTimeoutContext(ctx)
 
 	defer cancel()
 
@@ -263,19 +252,19 @@ func (s *Service) Login(
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 
-		_=CheckPassword(DummyPasswordHash, req.Password)
+		_ = CheckPassword(DummyPasswordHash, req.Password)
 
-		return  "", "", errors.New(
+		return "", "", errors.New(
 			"invalid credentials",
 		)
 	}
 
 	if err != nil {
-		return "","", err
+		return "", "", err
 	}
 
 	if !user.PasswordHash.Valid {
-		return "","", errors.New(
+		return "", "", errors.New(
 			"invalid credentials",
 		)
 	}
@@ -286,7 +275,7 @@ func (s *Service) Login(
 	)
 
 	if err != nil {
-		return "","", errors.New(
+		return "", "", errors.New(
 			"invalid credentials",
 		)
 	}
@@ -300,12 +289,11 @@ func (s *Service) Login(
 		sessionCtx,
 		s.Queries,
 		SessionUser{
-			ID: user.ID,
+			ID:    user.ID,
 			Email: user.Email,
 		},
 		userAgent,
 		ipAddress,
-
 	)
 }
 
@@ -330,6 +318,7 @@ func (s *Service) Logout(
 	)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -351,12 +340,7 @@ func (s *Service) ForgotPassword(
 		return err
 	}
 
-	if err := CheckPassword(
-		DummyPasswordHash,
-		dummyPassword,
-	); err != nil {
-		return err
-	}
+	logger.Log.Info("ForgotPassword: validated email")
 
 	dbCtx,
 		cancel :=
@@ -370,16 +354,21 @@ func (s *Service) ForgotPassword(
 			req.Email,
 		)
 
-	if errors.Is(
-		err,
-		pgx.ErrNoRows,
-	) {
+	if errors.Is(err, pgx.ErrNoRows) {
+		_ = CheckPassword(
+			DummyPasswordHash,
+			dummyPassword,
+		)
 		return nil
 	}
 
 	if err != nil {
 		return err
 	}
+	logger.Log.Info(
+		"ForgotPassword: found user",
+		zap.String("email", user.Email),
+	)
 
 	tx,
 		err :=
@@ -389,8 +378,16 @@ func (s *Service) ForgotPassword(
 		)
 
 	if err != nil {
+
+		logger.Log.Error(
+			"BeginTx failed",
+			zap.Error(err),
+		)
+
 		return err
 	}
+
+	logger.Log.Info("ForgotPassword: transaction started")
 
 	defer func() {
 		_ = tx.Rollback(dbCtx)
@@ -406,6 +403,21 @@ func (s *Service) ForgotPassword(
 	)
 
 	if err != nil {
+
+		logger.Log.Error(
+			"DeleteExpiredPasswordResetTokens failed",
+			zap.Error(err),
+		)
+
+		return err
+	}
+
+	logger.Log.Info("Deleted expired tokens")
+	if err != nil {
+		logger.Log.Error(
+			"Error: Something failed",
+			zap.Error(err),
+		)
 		return err
 	}
 
@@ -414,7 +426,7 @@ func (s *Service) ForgotPassword(
 			dbCtx,
 			user.ID,
 		)
-
+	logger.Log.Info("Deleted previous tokens")
 	if err != nil {
 		return err
 	}
@@ -425,19 +437,19 @@ func (s *Service) ForgotPassword(
 		GeneratePasswordResetToken()
 
 	if err != nil {
+
 		return err
 	}
 
+	logger.Log.Info("Generated reset token")
 	err =
 		txQueries.CreatePasswordResetToken(
 			dbCtx,
 			db.CreatePasswordResetTokenParams{
 
-				UserID:
-					user.ID,
+				UserID: user.ID,
 
-				TokenHash:
-					tokenHash,
+				TokenHash: tokenHash,
 
 				ExpiresAt: pgtype.Timestamptz{
 					Time: time.Now().UTC().Add(
@@ -449,18 +461,22 @@ func (s *Service) ForgotPassword(
 		)
 
 	if err != nil {
+
 		return err
 	}
 
+	logger.Log.Info("Inserted reset token")
 	err =
 		tx.Commit(
 			dbCtx,
 		)
 
 	if err != nil {
+
 		return err
 	}
 
+	logger.Log.Info("Committed transaction")
 	resetURL :=
 		s.FrontendURL +
 			"/reset-password?token=" +
@@ -474,24 +490,20 @@ func (s *Service) ForgotPassword(
 		)
 
 	defer cancel()
-
+	logger.Log.Info("About to send email")
 	err = s.Email.SendPasswordResetEmail(
 		emailCtx,
 		email.PasswordResetRequest{
 
-			To:
-				user.Email,
+			To: user.Email,
 
-			Name:
-				user.Username,
+			Name: user.Username,
 
-			ResetURL:
-				resetURL,
+			ResetURL: resetURL,
 
-			ExpiryMinutes:
-				int(
-					PasswordResetTokenTTL.Minutes(),
-				),
+			ExpiryMinutes: int(
+				PasswordResetTokenTTL.Minutes(),
+			),
 		},
 	)
 	if err != nil {
@@ -553,6 +565,7 @@ func (s *Service) ResetPassword(
 	}
 
 	if err != nil {
+
 		return err
 	}
 
@@ -563,6 +576,7 @@ func (s *Service) ResetPassword(
 		)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -574,6 +588,7 @@ func (s *Service) ResetPassword(
 		)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -597,18 +612,17 @@ func (s *Service) ResetPassword(
 			dbCtx,
 			db.UpdateUserPasswordParams{
 
-				ID:
-					resetToken.UserID,
+				ID: resetToken.UserID,
 
-				PasswordHash:
-					pgtype.Text{
-						String: hashedPassword,
-						Valid:  true,
-					},
+				PasswordHash: pgtype.Text{
+					String: hashedPassword,
+					Valid:  true,
+				},
 			},
 		)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -621,6 +635,7 @@ func (s *Service) ResetPassword(
 	)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -631,6 +646,7 @@ func (s *Service) ResetPassword(
 		)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -641,6 +657,7 @@ func (s *Service) ResetPassword(
 		)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -650,6 +667,7 @@ func (s *Service) ResetPassword(
 		)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -688,15 +706,23 @@ func (s *Service) SendVerificationEmail(
 			req.Email,
 		)
 
+	logger.Log.Info(
+		"ForgotPassword: GetUserByEmail finished",
+	)
+
+	if err != nil {
+
+		logger.Log.Error(
+			"ForgotPassword: GetUserByEmail error",
+			zap.Error(err),
+		)
+	}
+
 	if errors.Is(
 		err,
 		pgx.ErrNoRows,
 	) {
 		return nil
-	}
-
-	if err != nil {
-		return err
 	}
 
 	if user.EmailVerified {
@@ -711,6 +737,7 @@ func (s *Service) SendVerificationEmail(
 		)
 
 	if err != nil {
+
 		return err
 	}
 
@@ -742,6 +769,7 @@ func (s *Service) SendVerificationEmail(
 		GenerateEmailVerificationToken()
 
 	if err != nil {
+
 		return err
 	}
 
@@ -860,6 +888,7 @@ func (s *Service) VerifyEmail(
 	}
 
 	if err != nil {
+
 		return err
 	}
 
@@ -871,6 +900,7 @@ func (s *Service) VerifyEmail(
 		)
 
 	if err != nil {
+
 		return err
 	}
 

@@ -12,7 +12,6 @@ const (
 	RefreshTokenDuration = 7 * 24 * time.Hour
 )
 
-
 type JWTClaims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
@@ -50,7 +49,6 @@ func GenerateRefreshToken(
 		secret,
 	)
 }
-
 
 func generateToken(
 	userID string,

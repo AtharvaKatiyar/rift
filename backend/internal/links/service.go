@@ -11,27 +11,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 
-	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
-	"github.com/AtharvaKatiyar/rift/internal/utils"
 	"github.com/AtharvaKatiyar/rift/internal/cache"
+	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	subscriptionpkg "github.com/AtharvaKatiyar/rift/internal/subscriptions"
+	"github.com/AtharvaKatiyar/rift/internal/utils"
 )
 
 const (
 	MaxKeyGenerationAttempts = 5
 
-	linksDBTimeout =
-		3 * time.Second
+	linksDBTimeout = 3 * time.Second
 
-	linksRedisTimeout =
-		500 * time.Millisecond
+	linksRedisTimeout = 500 * time.Millisecond
 )
 
 type Service struct {
 	Queries *db.Queries
 	BaseURL string
 	Redis   *redis.Client
-
 }
 
 func sanitizeRequest(
@@ -95,7 +92,6 @@ func (s *Service) validateLinkCreation(
 
 	defer cancel()
 
-
 	user, err := s.Queries.GetUserByID(
 		userCtx,
 		userID,
@@ -118,9 +114,9 @@ func (s *Service) validateLinkCreation(
 	}
 
 	planLimit :=
-	subscriptionpkg.GetPlanLimit(
-		plan,
-	)
+		subscriptionpkg.GetPlanLimit(
+			plan,
+		)
 
 	if count >= planLimit {
 
@@ -152,7 +148,6 @@ func (s *Service) ensureSlugAvailable(
 		dbTimeoutContext(ctx)
 
 	defer cancel()
-
 
 	_, err := s.Queries.GetLinkBySlug(
 		slugCtx,
@@ -305,7 +300,7 @@ func (s *Service) GetUserLinks(
 	ctx context.Context,
 	userID string,
 	page int32,
-	pageSize  int32,
+	pageSize int32,
 ) ([]db.CentralLink, int64, int32, error) {
 
 	pgUserID, err := parseUUID(
@@ -360,19 +355,16 @@ func (s *Service) GetUserLinks(
 			linksCtx,
 
 			db.GetUserLinksParams{
-				UserID:
-					pgUserID,
+				UserID: pgUserID,
 
-				Limit:
-					pageSize,
+				Limit: pageSize,
 
-				Offset:
-					offset,
+				Offset: offset,
 			},
 		)
 
 	if err != nil {
-		return nil,  0, 0, err
+		return nil, 0, 0, err
 	}
 
 	return links, totalItems, page, nil
@@ -425,7 +417,7 @@ func (s *Service) UpdateLink(
 		s.Queries.GetLinkByIDAndUserID(
 			getLinkCtx,
 			db.GetLinkByIDAndUserIDParams{
-				ID: parsedLinkID,
+				ID:     parsedLinkID,
 				UserID: parsedUserID,
 			},
 		)
@@ -435,18 +427,18 @@ func (s *Service) UpdateLink(
 			"link not found",
 		)
 	}
-	
+
 	if existingLink.Slug != createReq.Slug {
 		slugCtx, cancel :=
 			dbTimeoutContext(ctx)
 
 		defer cancel()
 
-		_,err := s.Queries.GetLinkBySlug(
+		_, err := s.Queries.GetLinkBySlug(
 			slugCtx,
 			db.GetLinkBySlugParams{
 				UserID: parsedUserID,
-				Slug: createReq.Slug,
+				Slug:   createReq.Slug,
 			},
 		)
 
@@ -466,16 +458,16 @@ func (s *Service) UpdateLink(
 		dbTimeoutContext(ctx)
 
 	defer cancel()
-	
+
 	updatedLink, err :=
 		s.Queries.UpdateLink(
 			updateCtx,
 			db.UpdateLinkParams{
-				ID:         parsedLinkID,
-				UserID:     parsedUserID,
-				Title:      createReq.Title,
-				Slug:       createReq.Slug,
-				TargetUrl:  createReq.TargetURL,
+				ID:        parsedLinkID,
+				UserID:    parsedUserID,
+				Title:     createReq.Title,
+				Slug:      createReq.Slug,
+				TargetUrl: createReq.TargetURL,
 			},
 		)
 
@@ -491,11 +483,9 @@ func (s *Service) UpdateLink(
 	_ = s.Queries.CreateLinkHistory(
 		historyCtx,
 		db.CreateLinkHistoryParams{
-			LinkID: existingLink.ID,
-			OldTargetUrl:
-				existingLink.TargetUrl,
-			NewTargetUrl:
-				updatedLink.TargetUrl,
+			LinkID:       existingLink.ID,
+			OldTargetUrl: existingLink.TargetUrl,
+			NewTargetUrl: updatedLink.TargetUrl,
 		},
 	)
 
@@ -517,10 +507,10 @@ func (s *Service) UpdateLink(
 	// delete redis cache
 	cacheKey :=
 		user.Username +
-		":" +
-		existingLink.Slug +
-		":" +
-		existingLink.UniqueID
+			":" +
+			existingLink.Slug +
+			":" +
+			existingLink.UniqueID
 
 	if s.Redis != nil {
 		redisCtx, cancel :=
@@ -569,7 +559,7 @@ func (s *Service) GetLink(
 		s.Queries.GetLinkByIDAndUserID(
 			getLinkCtx,
 			db.GetLinkByIDAndUserIDParams{
-				ID: parsedLinkID,
+				ID:     parsedLinkID,
 				UserID: parsedUserID,
 			},
 		)
@@ -605,7 +595,7 @@ func (s *Service) DeleteLink(
 	_ = s.Queries.CreateLinkHistory(
 		historyCtx,
 		db.CreateLinkHistoryParams{
-			LinkID: link.ID,
+			LinkID:       link.ID,
 			OldTargetUrl: link.TargetUrl,
 			NewTargetUrl: "",
 		},
@@ -643,10 +633,10 @@ func (s *Service) DeleteLink(
 
 	cacheKey :=
 		user.Username +
-		":" +
-		link.Slug +
-		":" +
-		link.UniqueID
+			":" +
+			link.Slug +
+			":" +
+			link.UniqueID
 
 	if s.Redis != nil {
 		redisCtx, redisCancel :=
@@ -689,8 +679,8 @@ func (s *Service) ToggleLinkStatus(
 		s.Queries.ToggleLinkStatus(
 			toggleCtx,
 			db.ToggleLinkStatusParams{
-				ID: link.ID,
-				UserID: link.UserID,
+				ID:       link.ID,
+				UserID:   link.UserID,
 				IsActive: !link.IsActive,
 			},
 		)
@@ -713,10 +703,10 @@ func (s *Service) ToggleLinkStatus(
 
 	cacheKey :=
 		user.Username +
-		":" +
-		link.Slug +
-		":" +
-		link.UniqueID
+			":" +
+			link.Slug +
+			":" +
+			link.UniqueID
 
 	if s.Redis != nil {
 		redisCtx, redisCancel :=

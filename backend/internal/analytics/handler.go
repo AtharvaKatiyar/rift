@@ -48,8 +48,7 @@ func (h *Handler) GetLinkAnalytics(
 		c.JSON(
 			status,
 			gin.H{
-				"error":
-					err.Error(),
+				"error": err.Error(),
 			},
 		)
 		return

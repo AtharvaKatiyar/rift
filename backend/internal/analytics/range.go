@@ -24,6 +24,6 @@ func ParseRange(
 		return 90 * 24 * time.Hour
 
 	default:
-		return 3650 * 24 *time.Hour
+		return 3650 * 24 * time.Hour
 	}
 }

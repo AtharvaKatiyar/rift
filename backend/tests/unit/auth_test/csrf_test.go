@@ -19,24 +19,16 @@ func TestSetCSRFCookie(
 		expectHTTPOnly bool
 	}{
 		{
-			name:
-				"debug mode",
-			ginMode:
-				gin.DebugMode,
-			expectSecure:
-				false,
-			expectHTTPOnly:
-				false,
+			name:           "debug mode",
+			ginMode:        gin.DebugMode,
+			expectSecure:   false,
+			expectHTTPOnly: false,
 		},
 		{
-			name:
-				"release mode",
-			ginMode:
-				gin.ReleaseMode,
-			expectSecure:
-				true,
-			expectHTTPOnly:
-				false,
+			name:           "release mode",
+			ginMode:        gin.ReleaseMode,
+			expectSecure:   true,
+			expectHTTPOnly: false,
 		},
 	}
 

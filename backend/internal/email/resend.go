@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html/template"
-	texttemplate "text/template"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
 	"github.com/resend/resend-go/v2"
+	"html/template"
+	texttemplate "text/template"
 )
 
 type ResendService struct {
@@ -28,7 +28,7 @@ func NewResendService(
 	htmlTemplates, err := template.ParseFS(
 		templateFS,
 		"templates/*.html",
-	)	
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,9 @@ func (s *ResendService) SendPasswordResetEmail(
 	ctx context.Context,
 	request PasswordResetRequest,
 ) error {
-
+	logger.Log.Info(
+		"calling Resend SendEmailVerificationEmail",
+	)
 	var html bytes.Buffer
 
 	if err := s.htmlTemplates.ExecuteTemplate(
@@ -111,7 +113,6 @@ func (s *ResendService) send(
 		Text: text,
 
 		ReplyTo: "support@rift.dpdns.org",
-
 	}
 
 	_, err := s.client.Emails.SendWithContext(

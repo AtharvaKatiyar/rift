@@ -11,8 +11,8 @@ import (
 )
 
 type Handler struct {
-	Postgres *pgxpool.Pool
-	Redis    *redis.Client
+	Postgres  *pgxpool.Pool
+	Redis     *redis.Client
 	StartTime time.Time
 	Instance  string
 	Workers   bool
@@ -53,20 +53,15 @@ func (h *Handler) Health(
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"status": status,
-			"postgres":
-				postgresStatus,
-			"redis":
-				redisStatus,
-			"uptime":
-				time.Since(
-					h.StartTime,
-				).String(),
-			"instance":
-				h.Instance,
+			"status":   status,
+			"postgres": postgresStatus,
+			"redis":    redisStatus,
+			"uptime": time.Since(
+				h.StartTime,
+			).String(),
+			"instance": h.Instance,
 
-			"workers":
-				h.Workers,
+			"workers": h.Workers,
 		},
 	)
 }

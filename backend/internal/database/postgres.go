@@ -41,7 +41,7 @@ func ConnectPostgres(
 
 	poolConfig.MaxConnLifetime =
 		30 * time.Minute
-	
+
 	poolConfig.MaxConnLifetimeJitter =
 		5 * time.Minute
 
@@ -98,7 +98,6 @@ func ConnectPostgres(
 			"database",
 			cfg.PostgresDB,
 		),
-
 
 		zap.Int32(
 			"max_conns",

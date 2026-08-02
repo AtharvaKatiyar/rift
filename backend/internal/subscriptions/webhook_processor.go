@@ -222,7 +222,7 @@ func (
 			GetPaymentIntentForUpdate(
 				ctx,
 				db.GetPaymentIntentForUpdateParams{
-					Provider: webhook.Provider,
+					Provider:        webhook.Provider,
 					ProviderEventID: checkoutID,
 				},
 			)
@@ -471,7 +471,7 @@ func (
 			GetPaymentIntentForUpdate(
 				ctx,
 				db.GetPaymentIntentForUpdateParams{
-					Provider: webhook.Provider,
+					Provider:        webhook.Provider,
 					ProviderEventID: checkoutID,
 				},
 			)
@@ -584,7 +584,7 @@ func (
 			err,
 		)
 	}
- 
+
 	err =
 		tx.Commit(
 			ctx,

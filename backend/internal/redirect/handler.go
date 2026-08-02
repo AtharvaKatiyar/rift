@@ -27,8 +27,8 @@ func (h *Handler) Redirect(
 	)
 
 	targetURL,
-	linkID,
-	err :=
+		linkID,
+		err :=
 		h.Service.ResolveRedirect(
 			c.Request.Context(),
 			username,

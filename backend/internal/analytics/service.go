@@ -1,18 +1,17 @@
-
 package analytics
 
 import (
 	"context"
 	"errors"
+	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
+	"github.com/AtharvaKatiyar/rift/internal/geoip"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
+	"github.com/AtharvaKatiyar/rift/internal/utils"
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
 	"net/netip"
 	"time"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/gin-gonic/gin"
-	"github.com/AtharvaKatiyar/rift/internal/logger"
-	"go.uber.org/zap"
-	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
-	"github.com/AtharvaKatiyar/rift/internal/utils"
-	"github.com/AtharvaKatiyar/rift/internal/geoip"
 )
 
 type Service struct {
@@ -113,7 +112,7 @@ func (s *Service) TrackClick(
 				parsed.IPAddress,
 			)
 	}
-		
+
 	// logger.Log.Info(
 	// 	"geo lookup",
 	// 	zap.String(
@@ -129,7 +128,6 @@ func (s *Service) TrackClick(
 	// 		location.City,
 	// 	),
 	// )
-
 
 	parsedUUID, err :=
 		utils.ParseUUID(
@@ -153,96 +151,66 @@ func (s *Service) TrackClick(
 
 	s.Enqueue(
 		db.CreateLinkAnalyticsParams{
-			LinkID:
-				parsedUUID,
+			LinkID: parsedUUID,
 
-			Referrer:
-				pgtype.Text{
-					String:
-						parsed.Referrer,
-					Valid: true,
-				},
+			Referrer: pgtype.Text{
+				String: parsed.Referrer,
+				Valid:  true,
+			},
 
-			Country:
-				pgtype.Text{
-					String:
-						location.Country,
-					Valid: true,
-				},
+			Country: pgtype.Text{
+				String: location.Country,
+				Valid:  true,
+			},
 
-			City:
-				pgtype.Text{
-					String:
-						location.City,
-					Valid: true,
-				},
+			City: pgtype.Text{
+				String: location.City,
+				Valid:  true,
+			},
 
-			Browser:
-				pgtype.Text{
-					String:
-						parsed.Browser,
-					Valid: true,
-				},
+			Browser: pgtype.Text{
+				String: parsed.Browser,
+				Valid:  true,
+			},
 
-			Os:
-				pgtype.Text{
-					String:
-						parsed.OS,
-					Valid: true,
-				},
+			Os: pgtype.Text{
+				String: parsed.OS,
+				Valid:  true,
+			},
 
-			Device:
-				pgtype.Text{
-					String:
-						parsed.Device,
-					Valid: true,
-				},
+			Device: pgtype.Text{
+				String: parsed.Device,
+				Valid:  true,
+			},
 
-			IpAddress:
-				&ipAddr,
+			IpAddress: &ipAddr,
 
-			UtmSource:
-				pgtype.Text{
-					String:
-						utmSource,
-					Valid:
-						utmSource != "",
-				},
+			UtmSource: pgtype.Text{
+				String: utmSource,
+				Valid:  utmSource != "",
+			},
 
-			UtmMedium:
-				pgtype.Text{
-					String:
-						utmMedium,
-					Valid:
-						utmMedium != "",
-				},
+			UtmMedium: pgtype.Text{
+				String: utmMedium,
+				Valid:  utmMedium != "",
+			},
 
-			UtmCampaign:
-				pgtype.Text{
-					String:
-						utmCampaign,
-					Valid:
-						utmCampaign != "",
-				},
+			UtmCampaign: pgtype.Text{
+				String: utmCampaign,
+				Valid:  utmCampaign != "",
+			},
 
-			UtmTerm:
-				pgtype.Text{
-					String:
-						utmTerm,
-					Valid:
-						utmTerm != "",
-				},
+			UtmTerm: pgtype.Text{
+				String: utmTerm,
+				Valid:  utmTerm != "",
+			},
 
-			UtmContent:
-				pgtype.Text{
-					String:
-						utmContent,
-					Valid:
-						utmContent != "",
-				},
-			
-			IsBot:
-				isBot,
+			UtmContent: pgtype.Text{
+				String: utmContent,
+				Valid:  utmContent != "",
+			},
+
+			IsBot: isBot,
 		},
 	)
 }
@@ -267,7 +235,7 @@ func (s *Service) GetLinkAnalytics(
 		utils.ParseUUID(
 			userID,
 		)
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -284,13 +252,13 @@ func (s *Service) GetLinkAnalytics(
 	now :=
 		time.Now()
 
-		currentStart :=
+	currentStart :=
 		now.Add(-duration)
 
-		previousStart :=
+	previousStart :=
 		currentStart.Add(-duration)
 
-		previousEnd :=
+	previousEnd :=
 		currentStart
 
 	logger.Log.Info(
@@ -305,16 +273,13 @@ func (s *Service) GetLinkAnalytics(
 		),
 	)
 
-
 	ownsLink, err :=
 		s.Queries.VerifyLinkOwnership(
 			ctx,
 			db.VerifyLinkOwnershipParams{
-				ID:
-					parsedUUID,
+				ID: parsedUUID,
 
-				UserID:
-					parsedUserID,
+				UserID: parsedUserID,
 			},
 		)
 
@@ -333,53 +298,39 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetClicksInRange(
 			ctx,
 			db.GetClicksInRangeParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				StartTime:
-					pgtype.Timestamptz{
-						Time:
-							currentStart,
-						Valid:
-							true,
-					},
+				StartTime: pgtype.Timestamptz{
+					Time:  currentStart,
+					Valid: true,
+				},
 
-				EndTime:
-					pgtype.Timestamptz{
-						Time:
-							now,
-						Valid:
-							true,
-					},
+				EndTime: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
 			},
 		)
 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	previousClicks, err :=
 		s.Queries.GetClicksInRange(
 			ctx,
 			db.GetClicksInRangeParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				StartTime:
-					pgtype.Timestamptz{
-						Time:
-							previousStart,
-						Valid:
-							true,
-					},
+				StartTime: pgtype.Timestamptz{
+					Time:  previousStart,
+					Valid: true,
+				},
 
-				EndTime:
-					pgtype.Timestamptz{
-						Time:
-							previousEnd,
-						Valid:
-							true,
-					},
+				EndTime: pgtype.Timestamptz{
+					Time:  previousEnd,
+					Valid: true,
+				},
 			},
 		)
 
@@ -422,28 +373,23 @@ func (s *Service) GetLinkAnalytics(
 			Valid: false,
 		}
 
-
 	if duration > 0 {
 
 		sinceParam =
 			pgtype.Timestamptz{
-				Time:
-					since,
+				Time: since,
 
-				Valid:
-					true,
+				Valid: true,
 			}
 	}
-		
+
 	overview, err :=
 		s.Queries.GetLinkAnalyticsOverview(
 			ctx,
 			db.GetLinkAnalyticsOverviewParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -455,11 +401,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetClicksTimeline(
 			ctx,
 			db.GetClicksTimelineParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -471,11 +415,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetHourlyClicks(
 			ctx,
 			db.GetHourlyClicksParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -487,27 +429,23 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetRecentClicks(
 			ctx,
 			db.GetRecentClicksParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
 	browserRows, err :=
 		s.Queries.GetTopBrowsers(
 			ctx,
 			db.GetTopBrowsersParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -519,11 +457,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopDevices(
 			ctx,
 			db.GetTopDevicesParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -535,11 +471,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopReferrers(
 			ctx,
 			db.GetTopReferrersParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -551,11 +485,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopOperatingSystems(
 			ctx,
 			db.GetTopOperatingSystemsParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -567,11 +499,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopCountries(
 			ctx,
 			db.GetTopCountriesParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -583,11 +513,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopCities(
 			ctx,
 			db.GetTopCitiesParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -599,11 +527,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopCampaigns(
 			ctx,
 			db.GetTopCampaignsParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -615,11 +541,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopSources(
 			ctx,
 			db.GetTopSourcesParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -631,11 +555,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopMediums(
 			ctx,
 			db.GetTopMediumsParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -647,11 +569,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopTerms(
 			ctx,
 			db.GetTopTermsParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -663,11 +583,9 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetTopContent(
 			ctx,
 			db.GetTopContentParams{
-				LinkID:
-					parsedUUID,
+				LinkID: parsedUUID,
 
-				Column2:
-					sinceParam,
+				Column2: sinceParam,
 			},
 		)
 
@@ -679,11 +597,11 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetRepeatVisitors(
 			ctx,
 			db.GetRepeatVisitorsParams{
-				LinkID: parsedUUID,
+				LinkID:  parsedUUID,
 				Column2: sinceParam,
 			},
 		)
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -692,7 +610,7 @@ func (s *Service) GetLinkAnalytics(
 		s.Queries.GetAverageClicksPerVisitor(
 			ctx,
 			db.GetAverageClicksPerVisitorParams{
-				LinkID: parsedUUID,
+				LinkID:  parsedUUID,
 				Column2: sinceParam,
 			},
 		)
@@ -721,97 +639,77 @@ func (s *Service) GetLinkAnalytics(
 	response :=
 		&LinkAnalyticsResponse{
 			Overview: Overview{
-				TotalClicks:
-					overview.TotalClicks,
+				TotalClicks: overview.TotalClicks,
 
-				ClicksToday:
-					overview.ClicksToday,
+				ClicksToday: overview.ClicksToday,
 
-				UniqueVisitors:
-					overview.UniqueVisitors,
+				UniqueVisitors: overview.UniqueVisitors,
 
-				RepeatVisitors:
-					repeatVisitors,
+				RepeatVisitors: repeatVisitors,
 
-				AvgClicksPerVisitor:
-					averageClicksValue,
+				AvgClicksPerVisitor: averageClicksValue,
 
 				ChangePercentage: changePercentage,
-				Trend:              trend,
+				Trend:            trend,
 			},
 		}
 
-	for _, row :=
-		range timelineRows {
+	for _, row := range timelineRows {
 
 		response.Timeline =
 			append(
 				response.Timeline,
 				TimelinePoint{
-					Day:
-						row.Day.Time.Format(
-							"2006-01-02",
-						),
+					Day: row.Day.Time.Format(
+						"2006-01-02",
+					),
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
 
-	for _, row :=
-		range hourlyRows {
+	for _, row := range hourlyRows {
 
 		response.Hourly =
 			append(
 				response.Hourly,
 				HourlyPoint{
-					Hour:
-						row.Hour,
+					Hour: row.Hour,
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
 
-	for _, row :=
-		range browserRows {
+	for _, row := range browserRows {
 		response.Browsers =
 			append(
 				response.Browsers,
 				Breakdown{
-					Name:
-						row.Browser.String,
-					Clicks:
-						row.Clicks,
+					Name:   row.Browser.String,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range deviceRows {
+	for _, row := range deviceRows {
 		response.Devices =
 			append(
 				response.Devices,
 				Breakdown{
-					Name:
-						row.Device.String,
-					Clicks:
-						row.Clicks,
+					Name:   row.Device.String,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range operatingSystems {
+	for _, row := range operatingSystems {
 
 		response.OperatingSystems =
 			append(
 				response.OperatingSystems,
 				Breakdown{
-					Name:
-						row.Name.String,
-					Clicks:
-						row.Clicks,
+					Name:   row.Name.String,
+					Clicks: row.Clicks,
 				},
 			)
 	}
@@ -829,8 +727,7 @@ func (s *Service) GetLinkAnalytics(
 			},
 		)
 	}
-	for _, row :=
-		range cityRows {
+	for _, row := range cityRows {
 
 		name, ok :=
 			row.Name.(string)
@@ -843,16 +740,13 @@ func (s *Service) GetLinkAnalytics(
 			append(
 				response.Cities,
 				Breakdown{
-					Name:
-						name,
+					Name: name,
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range campaignRows {
+	for _, row := range campaignRows {
 
 		name, ok :=
 			row.Name.(string)
@@ -865,16 +759,13 @@ func (s *Service) GetLinkAnalytics(
 			append(
 				response.Campaigns,
 				Breakdown{
-					Name:
-						name,
+					Name: name,
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range sourceRows {
+	for _, row := range sourceRows {
 
 		name, ok :=
 			row.Name.(string)
@@ -887,16 +778,13 @@ func (s *Service) GetLinkAnalytics(
 			append(
 				response.Sources,
 				Breakdown{
-					Name:
-						name,
+					Name: name,
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range mediumRows {
+	for _, row := range mediumRows {
 
 		name, ok :=
 			row.Name.(string)
@@ -909,16 +797,13 @@ func (s *Service) GetLinkAnalytics(
 			append(
 				response.Mediums,
 				Breakdown{
-					Name:
-						name,
+					Name: name,
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range termRows {
+	for _, row := range termRows {
 
 		name, ok :=
 			row.Name.(string)
@@ -931,16 +816,13 @@ func (s *Service) GetLinkAnalytics(
 			append(
 				response.Terms,
 				Breakdown{
-					Name:
-						name,
+					Name: name,
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range contentRows {
+	for _, row := range contentRows {
 
 		name, ok :=
 			row.Name.(string)
@@ -953,30 +835,24 @@ func (s *Service) GetLinkAnalytics(
 			append(
 				response.Content,
 				Breakdown{
-					Name:
-						name,
+					Name: name,
 
-					Clicks:
-						row.Clicks,
+					Clicks: row.Clicks,
 				},
 			)
 	}
-	for _, row :=
-		range referrerRows {
+	for _, row := range referrerRows {
 		response.Referrers =
 			append(
 				response.Referrers,
 				Breakdown{
-					Name:
-						row.Source,
-					Clicks:
-						row.Clicks,
+					Name:   row.Source,
+					Clicks: row.Clicks,
 				},
 			)
 	}
 
-	for _, row :=
-		range recentRows {
+	for _, row := range recentRows {
 
 		referrer :=
 			"Direct"
@@ -1008,28 +884,21 @@ func (s *Service) GetLinkAnalytics(
 			append(
 				response.RecentClicks,
 				RecentClick{
-					ClickedAt:
-						row.ClickedAt.Time.Format(
-							time.RFC3339,
-						),
+					ClickedAt: row.ClickedAt.Time.Format(
+						time.RFC3339,
+					),
 
-					Referrer:
-						referrer,
+					Referrer: referrer,
 
-					Country:
-						country,
+					Country: country,
 
-					City:
-						city,
+					City: city,
 
-					Browser:
-						row.Browser.String,
+					Browser: row.Browser.String,
 
-					OS:
-						row.Os.String,
+					OS: row.Os.String,
 
-					Device:
-						row.Device.String,
+					Device: row.Device.String,
 				},
 			)
 	}

@@ -1,13 +1,13 @@
 package middleware_test
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"testing"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
 	"github.com/AtharvaKatiyar/rift/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 )
 
 func TestRecovery_RecoversFromPanic(
@@ -93,8 +93,7 @@ func TestRecovery_NormalRequest(
 			c.JSON(
 				http.StatusOK,
 				gin.H{
-					"message":
-						"healthy",
+					"message": "healthy",
 				},
 			)
 		},

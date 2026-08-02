@@ -6,15 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/AtharvaKatiyar/rift/internal/logger"
 	"github.com/AtharvaKatiyar/rift/internal/constants"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
 )
 
 func RequestLogger() gin.HandlerFunc {
 
-	
 	return func(c *gin.Context) {
-		
+
 		start := time.Now()
 		requestID, _ := c.Get(
 			constants.RequestIDKey,

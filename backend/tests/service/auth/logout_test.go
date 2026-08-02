@@ -20,12 +20,9 @@ func TestLogout(
 		expectError bool
 	}{
 		{
-			name:
-				"successful logout",
-			setupLogin:
-				true,
-			expectError:
-				false,
+			name:        "successful logout",
+			setupLogin:  true,
+			expectError: false,
 		},
 	}
 
@@ -48,12 +45,9 @@ func TestLogout(
 						service.Register(
 							context.Background(),
 							authpkg.RegisterRequest{
-								Email:
-									"user@example.com",
-								Username:
-									"testuser",
-								Password:
-									"StrongPass123!",
+								Email:    "user@example.com",
+								Username: "testuser",
+								Password: "StrongPass123!",
 							},
 							"register-agent",
 							"127.0.0.1",
@@ -71,10 +65,8 @@ func TestLogout(
 						service.Login(
 							context.Background(),
 							authpkg.LoginRequest{
-								Email:
-									"user@example.com",
-								Password:
-									"StrongPass123!",
+								Email:    "user@example.com",
+								Password: "StrongPass123!",
 							},
 							"login-agent",
 							"127.0.0.1",
@@ -136,12 +128,9 @@ func TestLogout_InvalidatesSession(
 		service.Register(
 			context.Background(),
 			authpkg.RegisterRequest{
-				Email:
-					"user@example.com",
-				Username:
-					"testuser",
-				Password:
-					"StrongPass123!",
+				Email:    "user@example.com",
+				Username: "testuser",
+				Password: "StrongPass123!",
 			},
 			"register-agent",
 			"127.0.0.1",
@@ -159,10 +148,8 @@ func TestLogout_InvalidatesSession(
 		service.Login(
 			context.Background(),
 			authpkg.LoginRequest{
-				Email:
-					"user@example.com",
-				Password:
-					"StrongPass123!",
+				Email:    "user@example.com",
+				Password: "StrongPass123!",
 			},
 			"login-agent",
 			"127.0.0.1",

@@ -20,24 +20,16 @@ func TestSetAuthCookies(
 		expectHTTPOnly bool
 	}{
 		{
-			name:
-				"development mode",
-			isProduction:
-				false,
-			expectSecure:
-				false,
-			expectHTTPOnly:
-				true,
+			name:           "development mode",
+			isProduction:   false,
+			expectSecure:   false,
+			expectHTTPOnly: true,
 		},
 		{
-			name:
-				"production mode",
-			isProduction:
-				true,
-			expectSecure:
-				true,
-			expectHTTPOnly:
-				true,
+			name:           "production mode",
+			isProduction:   true,
+			expectSecure:   true,
+			expectHTTPOnly: true,
 		},
 	}
 
@@ -106,20 +98,14 @@ func TestSetAuthCookies(
 					value  string
 				}{
 					{
-						name:
-							"access cookie",
-						cookie:
-							accessCookie,
-						value:
-							"access-token-value",
+						name:   "access cookie",
+						cookie: accessCookie,
+						value:  "access-token-value",
 					},
 					{
-						name:
-							"refresh cookie",
-						cookie:
-							refreshCookie,
-						value:
-							"refresh-token-value",
+						name:   "refresh cookie",
+						cookie: refreshCookie,
+						value:  "refresh-token-value",
 					},
 				}
 
@@ -190,20 +176,14 @@ func TestClearAuthCookies(
 		expectSecure bool
 	}{
 		{
-			name:
-				"development mode",
-			isProduction:
-				false,
-			expectSecure:
-				false,
+			name:         "development mode",
+			isProduction: false,
+			expectSecure: false,
 		},
 		{
-			name:
-				"production mode",
-			isProduction:
-				true,
-			expectSecure:
-				true,
+			name:         "production mode",
+			isProduction: true,
+			expectSecure: true,
 		},
 	}
 
@@ -288,20 +268,14 @@ func TestGetAccessCookie(
 		expectError bool
 	}{
 		{
-			name:
-				"cookie exists",
-			setupCookie:
-				true,
-			expectError:
-				false,
+			name:        "cookie exists",
+			setupCookie: true,
+			expectError: false,
 		},
 		{
-			name:
-				"cookie missing",
-			setupCookie:
-				false,
-			expectError:
-				true,
+			name:        "cookie missing",
+			setupCookie: false,
+			expectError: true,
 		},
 	}
 
@@ -330,10 +304,8 @@ func TestGetAccessCookie(
 
 					req.AddCookie(
 						&http.Cookie{
-							Name:
-								"access_token",
-							Value:
-								"test-access-token",
+							Name:  "access_token",
+							Value: "test-access-token",
 						},
 					)
 				}
@@ -384,20 +356,14 @@ func TestGetRefreshCookie(
 		expectError bool
 	}{
 		{
-			name:
-				"cookie exists",
-			setupCookie:
-				true,
-			expectError:
-				false,
+			name:        "cookie exists",
+			setupCookie: true,
+			expectError: false,
 		},
 		{
-			name:
-				"cookie missing",
-			setupCookie:
-				false,
-			expectError:
-				true,
+			name:        "cookie missing",
+			setupCookie: false,
+			expectError: true,
 		},
 	}
 
@@ -426,10 +392,8 @@ func TestGetRefreshCookie(
 
 					req.AddCookie(
 						&http.Cookie{
-							Name:
-								"refresh_token",
-							Value:
-								"test-refresh-token",
+							Name:  "refresh_token",
+							Value: "test-refresh-token",
 						},
 					)
 				}

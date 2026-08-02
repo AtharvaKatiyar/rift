@@ -6,10 +6,9 @@ import (
 )
 
 const (
-	charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	charset        = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	DefaultKeySize = 12
-	
-) 
+)
 
 func GeneratePublicKey() (string, error) {
 

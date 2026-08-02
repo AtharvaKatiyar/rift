@@ -31,8 +31,7 @@ func IsBot(
 			userAgent,
 		)
 
-	for _, keyword :=
-		range botKeywords {
+	for _, keyword := range botKeywords {
 
 		if strings.Contains(
 			ua,

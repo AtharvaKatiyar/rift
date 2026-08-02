@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/AtharvaKatiyar/rift/internal/constants"
 	"github.com/AtharvaKatiyar/rift/internal/httpx"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func RequestID() gin.HandlerFunc {

@@ -7,10 +7,10 @@ import (
 )
 
 type ParsedAnalytics struct {
-	Referrer string
-	Browser  string
-	OS       string
-	Device   string
+	Referrer  string
+	Browser   string
+	OS        string
+	Device    string
 	IPAddress string
 }
 
@@ -22,26 +22,21 @@ func ParseRequest(
 		c.Request.UserAgent()
 
 	return ParsedAnalytics{
-		Referrer:
-			c.Request.Referer(),
+		Referrer: c.Request.Referer(),
 
-		Browser:
-			parseBrowser(
-				userAgent,
-			),
+		Browser: parseBrowser(
+			userAgent,
+		),
 
-		OS:
-			parseOS(
-				userAgent,
-			),
+		OS: parseOS(
+			userAgent,
+		),
 
-		Device:
-			parseDevice(
-				userAgent,
-			),
+		Device: parseDevice(
+			userAgent,
+		),
 
-		IPAddress:
-			c.ClientIP(),
+		IPAddress: c.ClientIP(),
 	}
 }
 

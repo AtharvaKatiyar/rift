@@ -3,33 +3,31 @@ package redirect
 import (
 	"context"
 	"errors"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"github.com/AtharvaKatiyar/rift/internal/cache"
-	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
-	"github.com/AtharvaKatiyar/rift/internal/logger"
-	"github.com/AtharvaKatiyar/rift/internal/httpx"
-	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
 	analyticspkg "github.com/AtharvaKatiyar/rift/internal/analytics"
+	"github.com/AtharvaKatiyar/rift/internal/cache"
+	clickspkg "github.com/AtharvaKatiyar/rift/internal/clicks"
+	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
+	"github.com/AtharvaKatiyar/rift/internal/httpx"
+	"github.com/AtharvaKatiyar/rift/internal/logger"
 )
 
 type Service struct {
-	Queries 	*db.Queries
-	Redis   	*redis.Client
-	Clicks  	*clickspkg.Service
-	Analytics   *analyticspkg.Service
+	Queries   *db.Queries
+	Redis     *redis.Client
+	Clicks    *clickspkg.Service
+	Analytics *analyticspkg.Service
 }
 
 const (
-	redirectRedisTimeout =
-		500 * time.Millisecond
+	redirectRedisTimeout = 500 * time.Millisecond
 
-	redirectDBTimeout =
-		1 * time.Second
+	redirectDBTimeout = 1 * time.Second
 )
 
 func buildCacheKey(
@@ -63,7 +61,7 @@ func (s *Service) ResolveRedirect(
 	)
 
 	// Try cache first
-	if url,linkId, found, err := s.resolveFromCache(
+	if url, linkId, found, err := s.resolveFromCache(
 		ctx,
 		cacheKey,
 		username,
@@ -82,7 +80,7 @@ func (s *Service) ResolveRedirect(
 			),
 		)
 
-		return url,linkId, err
+		return url, linkId, err
 	}
 
 	// DB fallback
@@ -263,8 +261,6 @@ func (s *Service) cacheRedirect(
 		)
 	}
 }
-
-
 
 // func (s *Service) incrementClickCount(
 // 	linkID pgtype.UUID,

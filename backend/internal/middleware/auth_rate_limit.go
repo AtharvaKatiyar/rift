@@ -9,15 +9,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 
-	"go.uber.org/zap"
 	"github.com/AtharvaKatiyar/rift/internal/logger"
+	"go.uber.org/zap"
 )
 
 const (
@@ -27,12 +27,12 @@ const (
 )
 
 type AuthRateLimitConfig struct {
-    IPLimit    		int64
-    IdentifierLimit int64
-    PairLimit  		int64
-    Window     		time.Duration
-    Prefix     		string
-	IdentifierField	string
+	IPLimit         int64
+	IdentifierLimit int64
+	PairLimit       int64
+	Window          time.Duration
+	Prefix          string
+	IdentifierField string
 }
 
 func hashIdentifier(
@@ -108,8 +108,8 @@ func AuthRateLimit(
 	}
 
 	if cfg.IPLimit < 0 ||
-	cfg.IdentifierLimit < 0 ||
-	cfg.PairLimit < 0 {
+		cfg.IdentifierLimit < 0 ||
+		cfg.PairLimit < 0 {
 
 		panic(
 			"invalid rate limit configuration",
@@ -117,7 +117,6 @@ func AuthRateLimit(
 	}
 
 	return func(c *gin.Context) {
-
 
 		ctx := c.Request.Context()
 
@@ -149,46 +148,46 @@ func AuthRateLimit(
 			body, err := io.ReadAll(
 				c.Request.Body,
 			)
-	
+
 			if err != nil {
-	
+
 				c.JSON(
 					http.StatusBadRequest,
 					gin.H{
 						"error": "invalid request body",
 					},
 				)
-	
+
 				c.Abort()
 				return
 			}
-	
+
 			identifier :=
 				extractIdentifier(
 					body,
 					cfg.IdentifierField,
 				)
-	
+
 			if identifier != "" {
-	
+
 				identifierHash :=
 					hashIdentifier(
 						identifier,
 					)
-	
+
 				pairKey := fmt.Sprintf(
 					"rl:%s:pair:%s:%s",
 					cfg.Prefix,
 					identifierHash,
 					ip,
 				)
-	
+
 				identifierKey := fmt.Sprintf(
 					"rl:%s:id:%s",
 					cfg.Prefix,
 					identifierHash,
 				)
-	
+
 				if incrementAndCheckLimit(
 					ctx,
 					rdb,
@@ -196,15 +195,15 @@ func AuthRateLimit(
 					cfg.IdentifierLimit,
 					cfg.Window,
 				) {
-	
+
 					blockRateLimit(
 						c,
 						cfg.Window,
 					)
-	
+
 					return
 				}
-	
+
 				if incrementAndCheckLimit(
 					ctx,
 					rdb,
@@ -212,23 +211,23 @@ func AuthRateLimit(
 					cfg.PairLimit,
 					cfg.Window,
 				) {
-	
+
 					blockRateLimit(
 						c,
 						cfg.Window,
 					)
-	
+
 					return
 				}
 			}
-	
+
 			c.Request.Body = io.NopCloser(
 				bytes.NewBuffer(body),
 			)
-	
+
 		}
 		c.Next()
-		
+
 	}
 }
 

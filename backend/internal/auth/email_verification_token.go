@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	EmailVerificationTokenTTL =
-		24 * time.Hour
+	EmailVerificationTokenTTL = 24 * time.Hour
 
 	emailVerificationTokenLength = 32
 )

@@ -57,11 +57,9 @@ func (s *Service) Lookup(
 
 	location :=
 		Location{
-			Country:
-				record.Country.Names["en"],
+			Country: record.Country.Names["en"],
 
-			City:
-				record.City.Names["en"],
+			City: record.City.Names["en"],
 		}
 
 	if location.Country == "" {

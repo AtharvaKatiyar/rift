@@ -18,12 +18,9 @@ func setupAuthService(
 		)
 
 	return &authpkg.Service{
-		Queries:
-			testDB.Queries,
-		DB:
-			testDB.Pool,
-		Secret:
-			"test-secret-key",
+		Queries: testDB.Queries,
+		DB:      testDB.Pool,
+		Secret:  "test-secret-key",
 	}
 }
 
@@ -38,64 +35,40 @@ func TestRegister(
 		errorMsg    string
 	}{
 		{
-			name:
-				"successful registration",
-			req:
-				authpkg.RegisterRequest{
-					Email:
-						"user@example.com",
-					Username:
-						"riftuser",
-					Password:
-						"StrongPass123!",
-				},
-			expectError:
-				false,
+			name: "successful registration",
+			req: authpkg.RegisterRequest{
+				Email:    "user@example.com",
+				Username: "riftuser",
+				Password: "StrongPass123!",
+			},
+			expectError: false,
 		},
 		{
-			name:
-				"invalid email",
-			req:
-				authpkg.RegisterRequest{
-					Email:
-						"invalid-email",
-					Username:
-						"riftuser2",
-					Password:
-						"StrongPass123!",
-				},
-			expectError:
-				true,
+			name: "invalid email",
+			req: authpkg.RegisterRequest{
+				Email:    "invalid-email",
+				Username: "riftuser2",
+				Password: "StrongPass123!",
+			},
+			expectError: true,
 		},
 		{
-			name:
-				"invalid password",
-			req:
-				authpkg.RegisterRequest{
-					Email:
-						"user2@example.com",
-					Username:
-						"riftuser3",
-					Password:
-						"weak",
-				},
-			expectError:
-				true,
+			name: "invalid password",
+			req: authpkg.RegisterRequest{
+				Email:    "user2@example.com",
+				Username: "riftuser3",
+				Password: "weak",
+			},
+			expectError: true,
 		},
 		{
-			name:
-				"reserved username",
-			req:
-				authpkg.RegisterRequest{
-					Email:
-						"user3@example.com",
-					Username:
-						"admin",
-					Password:
-						"StrongPass123!",
-				},
-			expectError:
-				true,
+			name: "reserved username",
+			req: authpkg.RegisterRequest{
+				Email:    "user3@example.com",
+				Username: "admin",
+				Password: "StrongPass123!",
+			},
+			expectError: true,
 		},
 	}
 
@@ -268,12 +241,9 @@ func TestRegister_DuplicateEmail(
 
 	req :=
 		authpkg.RegisterRequest{
-			Email:
-				"duplicate@example.com",
-			Username:
-				"user1",
-			Password:
-				"StrongPass123!",
+			Email:    "duplicate@example.com",
+			Username: "user1",
+			Password: "StrongPass123!",
 		}
 
 	_, _, err :=
@@ -320,12 +290,9 @@ func TestRegister_DuplicateUsername(
 
 	req :=
 		authpkg.RegisterRequest{
-			Email:
-				"usera@example.com",
-			Username:
-				"sameuser",
-			Password:
-				"StrongPass123!",
+			Email:    "usera@example.com",
+			Username: "sameuser",
+			Password: "StrongPass123!",
 		}
 
 	_, _, err :=
@@ -372,12 +339,9 @@ func TestRegister_NormalizesInput(
 
 	req :=
 		authpkg.RegisterRequest{
-			Email:
-				"  USER@EXAMPLE.COM ",
-			Username:
-				"  TestUser ",
-			Password:
-				"StrongPass123!",
+			Email:    "  USER@EXAMPLE.COM ",
+			Username: "  TestUser ",
+			Password: "StrongPass123!",
 		}
 
 	_, _, err :=

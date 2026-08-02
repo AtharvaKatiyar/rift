@@ -4,8 +4,7 @@ import "context"
 
 type contextKey string
 
-const RequestIDContextKey =
-	contextKey("request_id")
+const RequestIDContextKey = contextKey("request_id")
 
 func WithRequestID(
 	ctx context.Context,

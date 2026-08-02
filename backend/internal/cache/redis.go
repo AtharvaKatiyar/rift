@@ -25,11 +25,9 @@ func ConnectRedis(
 
 	rdb := redis.NewClient(
 		&redis.Options{
-			Addr:
-				addr,
+			Addr: addr,
 
-			Password:
-				cfg.RedisPassword,
+			Password: cfg.RedisPassword,
 
 			DB: 0,
 
@@ -42,20 +40,15 @@ func ConnectRedis(
 			MaxRetries: 3,
 
 			// Timeouts
-			DialTimeout:
-				2 * time.Second,
+			DialTimeout: 2 * time.Second,
 
-			ReadTimeout:
-				500 * time.Millisecond,
+			ReadTimeout: 500 * time.Millisecond,
 
-			WriteTimeout:
-				500 * time.Millisecond,
+			WriteTimeout: 500 * time.Millisecond,
 
-			PoolTimeout:
-				1 * time.Second,
+			PoolTimeout: 1 * time.Second,
 
-			ConnMaxIdleTime:
-				5 * time.Minute,
+			ConnMaxIdleTime: 5 * time.Minute,
 		},
 	)
 

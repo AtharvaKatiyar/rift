@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/AtharvaKatiyar/rift/internal/httpx"
+	"github.com/gin-gonic/gin"
 )
 
 func SetSessionResponse(

@@ -3,10 +3,10 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"testing"
 	"os"
 	"path/filepath"
 	"runtime"
+	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -110,8 +110,7 @@ func runMigrations(
 	migrationsDir :=
 		migrationsPath()
 
-	for _, migration :=
-		range migrations {
+	for _, migration := range migrations {
 
 		migrationFile :=
 			filepath.Join(

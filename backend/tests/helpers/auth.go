@@ -63,9 +63,7 @@ func RegisterAndLogin(
 	)
 
 	return &AuthResult{
-		Cookies:
-			w.Result().Cookies(),
-		Email:
-			registerReq.Email,
+		Cookies: w.Result().Cookies(),
+		Email:   registerReq.Email,
 	}
 }

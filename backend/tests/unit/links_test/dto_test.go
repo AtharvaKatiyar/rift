@@ -31,73 +31,55 @@ func TestCreateLinkRequestBinding(
 		expectError bool
 	}{
 		{
-			name:
-				"valid request",
-			body:
-				`{
+			name: "valid request",
+			body: `{
 					"title":"My Link",
 					"slug":"my-link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				false,
+			expectError: false,
 		},
 		{
-			name:
-				"missing title",
-			body:
-				`{
+			name: "missing title",
+			body: `{
 					"slug":"my-link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"missing slug",
-			body:
-				`{
+			name: "missing slug",
+			body: `{
 					"title":"My Link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"missing target_url",
-			body:
-				`{
+			name: "missing target_url",
+			body: `{
 					"title":"My Link",
 					"slug":"my-link"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"invalid url",
-			body:
-				`{
+			name: "invalid url",
+			body: `{
 					"title":"My Link",
 					"slug":"my-link",
 					"target_url":"not-a-url"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"title too long",
-			body:
-				`{
+			name: "title too long",
+			body: `{
 					"title":"` + longTitle + `",
 					"slug":"my-link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 	}
 
@@ -180,73 +162,55 @@ func TestUpdateLinkRequestBinding(
 		expectError bool
 	}{
 		{
-			name:
-				"valid request",
-			body:
-				`{
+			name: "valid request",
+			body: `{
 					"title":"Updated Link",
 					"slug":"updated-link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				false,
+			expectError: false,
 		},
 		{
-			name:
-				"missing title",
-			body:
-				`{
+			name: "missing title",
+			body: `{
 					"slug":"updated-link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"missing slug",
-			body:
-				`{
+			name: "missing slug",
+			body: `{
 					"title":"Updated Link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"missing target_url",
-			body:
-				`{
+			name: "missing target_url",
+			body: `{
 					"title":"Updated Link",
 					"slug":"updated-link"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"invalid url",
-			body:
-				`{
+			name: "invalid url",
+			body: `{
 					"title":"Updated Link",
 					"slug":"updated-link",
 					"target_url":"invalid"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 		{
-			name:
-				"title too long",
-			body:
-				`{
+			name: "title too long",
+			body: `{
 					"title":"` + longTitle + `",
 					"slug":"updated-link",
 					"target_url":"https://example.com"
 				}`,
-			expectError:
-				true,
+			expectError: true,
 		},
 	}
 

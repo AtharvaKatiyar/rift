@@ -1,9 +1,9 @@
 package links
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
-	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
@@ -78,7 +78,7 @@ func (h *Handler) CreateLink(
 		http.StatusCreated,
 		gin.H{
 			"message": "link created",
-			"url": publicURL,
+			"url":     publicURL,
 		},
 	)
 }
@@ -132,8 +132,7 @@ func (h *Handler) GetUserLinks(
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{
-					"error":
-						"invalid page",
+					"error": "invalid page",
 				},
 			)
 
@@ -161,8 +160,7 @@ func (h *Handler) GetUserLinks(
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{
-					"error":
-						"invalid page_size",
+					"error": "invalid page_size",
 				},
 			)
 
@@ -190,7 +188,6 @@ func (h *Handler) GetUserLinks(
 				parsedPageSize,
 			)
 	}
-
 
 	links, totalItems, correctPage, err :=
 		h.Service.GetUserLinks(
@@ -220,30 +217,22 @@ func (h *Handler) GetUserLinks(
 		http.StatusOK,
 
 		gin.H{
-			"links":
-				links,
+			"links": links,
 
-			"pagination":
-				gin.H{
-					"page":
-						correctPage,
+			"pagination": gin.H{
+				"page": correctPage,
 
-					"page_size":
-						pageSize,
+				"page_size": pageSize,
 
-					"total_items":
-						totalItems,
+				"total_items": totalItems,
 
-					"total_pages":
-						totalPages,
+				"total_pages": totalPages,
 
-					"has_next":
-						correctPage <
-							int32(totalPages),
+				"has_next": correctPage <
+					int32(totalPages),
 
-					"has_previous":
-						correctPage > 1,
-				},
+				"has_previous": correctPage > 1,
+			},
 		},
 	)
 }
@@ -320,8 +309,7 @@ func (h *Handler) UpdateLink(
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"message":
-			"link updated successfully",
+			"message": "link updated successfully",
 		},
 	)
 }
@@ -441,8 +429,7 @@ func (h *Handler) DeleteLink(
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"message":
-				"link deleted successfully",
+			"message": "link deleted successfully",
 		},
 	)
 }
@@ -502,8 +489,7 @@ func (h *Handler) ToggleStatus(
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"message":
-				"link status updated",
+			"message": "link status updated",
 		},
 	)
 }

@@ -15,22 +15,16 @@ func TestHashPassword(
 		password string
 	}{
 		{
-			name:
-				"valid password",
-			password:
-				"StrongPass123!",
+			name:     "valid password",
+			password: "StrongPass123!",
 		},
 		{
-			name:
-				"empty password",
-			password:
-				"",
+			name:     "empty password",
+			password: "",
 		},
 		{
-			name:
-				"long password",
-			password:
-				"ThisIsAVeryLongPassword123!@#$%^&*()",
+			name:     "long password",
+			password: "ThisIsAVeryLongPassword123!@#$%^&*()",
 		},
 	}
 
@@ -131,36 +125,24 @@ func TestCheckPassword(
 		expectError bool
 	}{
 		{
-			name:
-				"correct password",
-			password:
-				validPassword,
-			expectError:
-				false,
+			name:        "correct password",
+			password:    validPassword,
+			expectError: false,
 		},
 		{
-			name:
-				"wrong password",
-			password:
-				"WrongPassword123!",
-			expectError:
-				true,
+			name:        "wrong password",
+			password:    "WrongPassword123!",
+			expectError: true,
 		},
 		{
-			name:
-				"empty password",
-			password:
-				"",
-			expectError:
-				true,
+			name:        "empty password",
+			password:    "",
+			expectError: true,
 		},
 		{
-			name:
-				"close but incorrect password",
-			password:
-				"strongpassword123!",
-			expectError:
-				true,
+			name:        "close but incorrect password",
+			password:    "strongpassword123!",
+			expectError: true,
 		},
 	}
 

@@ -54,52 +54,34 @@ func TestSecurityHeaders(
 		expected string
 	}{
 		{
-			name:
-				"x frame options",
-			header:
-				"X-Frame-Options",
-			expected:
-				"DENY",
+			name:     "x frame options",
+			header:   "X-Frame-Options",
+			expected: "DENY",
 		},
 		{
-			name:
-				"x content type options",
-			header:
-				"X-Content-Type-Options",
-			expected:
-				"nosniff",
+			name:     "x content type options",
+			header:   "X-Content-Type-Options",
+			expected: "nosniff",
 		},
 		{
-			name:
-				"referrer policy",
-			header:
-				"Referrer-Policy",
-			expected:
-				"strict-origin-when-cross-origin",
+			name:     "referrer policy",
+			header:   "Referrer-Policy",
+			expected: "strict-origin-when-cross-origin",
 		},
 		{
-			name:
-				"content security policy",
-			header:
-				"Content-Security-Policy",
-			expected:
-				"default-src 'self'; frame-ancestors 'none'; base-uri 'self';",
+			name:     "content security policy",
+			header:   "Content-Security-Policy",
+			expected: "default-src 'self'; frame-ancestors 'none'; base-uri 'self';",
 		},
 		{
-			name:
-				"permissions policy",
-			header:
-				"Permissions-Policy",
-			expected:
-				"camera=(), microphone=(), geolocation=()",
+			name:     "permissions policy",
+			header:   "Permissions-Policy",
+			expected: "camera=(), microphone=(), geolocation=()",
 		},
 		{
-			name:
-				"hsts",
-			header:
-				"Strict-Transport-Security",
-			expected:
-				"max-age=31536000; includeSubDomains",
+			name:     "hsts",
+			header:   "Strict-Transport-Security",
+			expected: "max-age=31536000; includeSubDomains",
 		},
 	}
 

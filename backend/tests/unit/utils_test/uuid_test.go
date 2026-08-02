@@ -16,44 +16,29 @@ func TestParseUUID(
 		expectError bool
 	}{
 		{
-			name:
-				"valid uuid",
-			input:
-				"123e4567-e89b-12d3-a456-426614174000",
-			expectError:
-				false,
+			name:        "valid uuid",
+			input:       "123e4567-e89b-12d3-a456-426614174000",
+			expectError: false,
 		},
 		{
-			name:
-				"invalid uuid",
-			input:
-				"invalid-uuid",
-			expectError:
-				true,
+			name:        "invalid uuid",
+			input:       "invalid-uuid",
+			expectError: true,
 		},
 		{
-			name:
-				"empty string",
-			input:
-				"",
-			expectError:
-				true,
+			name:        "empty string",
+			input:       "",
+			expectError: true,
 		},
 		{
-			name:
-				"malformed uuid",
-			input:
-				"12345",
-			expectError:
-				true,
+			name:        "malformed uuid",
+			input:       "12345",
+			expectError: true,
 		},
 		{
-			name:
-				"missing sections",
-			input:
-				"123e4567-e89b",
-			expectError:
-				true,
+			name:        "missing sections",
+			input:       "123e4567-e89b",
+			expectError: true,
 		},
 	}
 

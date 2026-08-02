@@ -51,28 +51,21 @@ func SetCSRFCookie(
 	http.SetCookie(
 		c.Writer,
 		&http.Cookie{
-			Name:
-				csrfCookieName,
+			Name: csrfCookieName,
 
-			Value:
-				token,
+			Value: token,
 
-			Path:
-				"/",
+			Path: "/",
 
-			HttpOnly:
-				false,
+			HttpOnly: false,
 
-			Secure:
-				isProduction,
+			Secure: isProduction,
 
-			SameSite:
-				http.SameSiteLaxMode,
+			SameSite: http.SameSiteLaxMode,
 
-			MaxAge:
-				int(
-					RefreshTokenDuration.Seconds(),
-				),
+			MaxAge: int(
+				RefreshTokenDuration.Seconds(),
+			),
 		},
 	)
 

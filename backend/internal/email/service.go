@@ -12,6 +12,6 @@ type Service interface {
 
 	SendEmailVerificationEmail(
 		ctx context.Context,
-		req	EmailVerificationRequest,
+		req EmailVerificationRequest,
 	) error
 }

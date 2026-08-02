@@ -2,12 +2,12 @@ package helpers
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"log"
 	"os"
 	"sync"
 	"testing"
 	"time"
-	"github.com/stretchr/testify/require"
 
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,11 +17,11 @@ import (
 )
 
 var (
-	testDB     *TestDatabase
-	testRedis  *redis.Client
+	testDB    *TestDatabase
+	testRedis *redis.Client
 
-	onceDB     sync.Once
-	onceRedis  sync.Once
+	onceDB    sync.Once
+	onceRedis sync.Once
 )
 
 func SharedTestDatabase(
@@ -74,54 +74,52 @@ func SharedTestDatabase(
 		}
 
 		pool, err :=
-	pgxpool.New(
-		ctx,
-		connStr,
-	)
-
-if err != nil {
-	t.Fatalf(
-		"failed postgres pool: %v",
-		err,
-	)
-}
-
-require.Eventually(
-	t,
-	func() bool {
-
-		err :=
-			pool.Ping(
+			pgxpool.New(
 				ctx,
+				connStr,
 			)
 
-		return err == nil
-		},
-		30*time.Second,
-		1*time.Second,
-	)
+		if err != nil {
+			t.Fatalf(
+				"failed postgres pool: %v",
+				err,
+			)
+		}
 
-	time.Sleep(
-		2 * time.Second,
-	)
+		require.Eventually(
+			t,
+			func() bool {
 
-	runMigrations(
-		t,
-		pool,
-	)
+				err :=
+					pool.Ping(
+						ctx,
+					)
 
-	if pool == nil {
-		t.Fatal(
-			"database pool is nil",
+				return err == nil
+			},
+			30*time.Second,
+			1*time.Second,
 		)
-	}
+
+		time.Sleep(
+			2 * time.Second,
+		)
+
+		runMigrations(
+			t,
+			pool,
+		)
+
+		if pool == nil {
+			t.Fatal(
+				"database pool is nil",
+			)
+		}
 
 		testDB =
 			&TestDatabase{
-				Pool:
-					pool,
-				Queries:
-					db.New(pool),
+				Pool:    pool,
+				Queries: db.New(pool),
 			}
 	})
 
@@ -181,8 +179,7 @@ func SharedTestRedis(
 		testRedis =
 			redis.NewClient(
 				&redis.Options{
-					Addr:
-						addr,
+					Addr: addr,
 				},
 			)
 	})

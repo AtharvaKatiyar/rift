@@ -18,6 +18,7 @@ import (
 	"github.com/AtharvaKatiyar/rift/internal/config"
 	"github.com/AtharvaKatiyar/rift/internal/database"
 	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
+	emailpkg "github.com/AtharvaKatiyar/rift/internal/email"
 	"github.com/AtharvaKatiyar/rift/internal/geoip"
 	"github.com/AtharvaKatiyar/rift/internal/health"
 	linkspkg "github.com/AtharvaKatiyar/rift/internal/links"
@@ -27,7 +28,6 @@ import (
 	redirectpkg "github.com/AtharvaKatiyar/rift/internal/redirect"
 	subscriptionpkg "github.com/AtharvaKatiyar/rift/internal/subscriptions"
 	dodopayments "github.com/dodopayments/dodopayments-go"
-	emailpkg "github.com/AtharvaKatiyar/rift/internal/email"
 	"github.com/dodopayments/dodopayments-go/option"
 	"go.uber.org/zap"
 )
@@ -160,10 +160,10 @@ func main() {
 	}
 
 	authService := &authpkg.Service{
-		Queries: queries,
-		DB:      pgPool,
-		Secret:  cfg.JWTSecret,
-		Email:	 emailService,
+		Queries:     queries,
+		DB:          pgPool,
+		Secret:      cfg.JWTSecret,
+		Email:       emailService,
 		FrontendURL: cfg.FrontendURL,
 	}
 
@@ -327,11 +327,11 @@ func main() {
 		err := emailService.SendPasswordResetEmail(
 			c.Request.Context(),
 			emailpkg.PasswordResetRequest{
-				To: "gijenel107@apdtax.com",
+				To: "voroloh314@ayable.com",
 
 				Name: "Atharva",
 
-				ResetURL: "https://rift.dpdns.org/reset-password?token=test-token-123",
+				ResetURL: "http://localhost:3000/reset-password?token=test-token-123",
 
 				ExpiryMinutes: 30,
 			},
@@ -393,11 +393,11 @@ func main() {
 			middleware.AuthRateLimit(
 				redisClient,
 				middleware.AuthRateLimitConfig{
-					IPLimit:    10,
+					IPLimit:         10,
 					IdentifierLimit: 5,
-					PairLimit:  3,
-					Window:     time.Hour,
-					Prefix:     "register",
+					PairLimit:       3,
+					Window:          time.Hour,
+					Prefix:          "register",
 					IdentifierField: middleware.IdentifierEmail,
 				},
 			),
@@ -409,11 +409,11 @@ func main() {
 			middleware.AuthRateLimit(
 				redisClient,
 				middleware.AuthRateLimitConfig{
-					IPLimit:    30,
+					IPLimit:         30,
 					IdentifierLimit: 8,
-					PairLimit:  5,
-					Window:     time.Minute,
-					Prefix:     "login",
+					PairLimit:       5,
+					Window:          time.Minute,
+					Prefix:          "login",
 					IdentifierField: middleware.IdentifierEmail,
 				},
 			),
@@ -424,11 +424,11 @@ func main() {
 			middleware.AuthRateLimit(
 				redisClient,
 				middleware.AuthRateLimitConfig{
-					IPLimit:    5,
+					IPLimit:         5,
 					IdentifierLimit: 3,
-					PairLimit:  2,
-					Window:     15 * time.Minute,
-					Prefix:     "forgot-password",
+					PairLimit:       2,
+					Window:          15 * time.Minute,
+					Prefix:          "forgot-password",
 					IdentifierField: middleware.IdentifierEmail,
 				},
 			),
@@ -440,11 +440,11 @@ func main() {
 			middleware.AuthRateLimit(
 				redisClient,
 				middleware.AuthRateLimitConfig{
-					IPLimit:    10,
+					IPLimit:         10,
 					IdentifierLimit: 5,
-					PairLimit:  2,
-					Window:     15 * time.Minute,
-					Prefix:     "reset-password",
+					PairLimit:       2,
+					Window:          15 * time.Minute,
+					Prefix:          "reset-password",
 					IdentifierField: middleware.IdentifierToken,
 				},
 			),

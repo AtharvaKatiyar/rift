@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
+	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	db "github.com/AtharvaKatiyar/rift/internal/database/sqlc"
 )
 
 func (s *Service) RefreshSession(
@@ -63,7 +63,6 @@ func (s *Service) RefreshSession(
 		dbTimeoutContext(ctx)
 
 	defer cancel()
-
 
 	storedToken, err :=
 		qtx.GetRefreshTokenForUpdate(
@@ -143,7 +142,7 @@ func (s *Service) RefreshSession(
 			refreshCtx,
 			qtx,
 			SessionUser{
-				ID: user.ID,
+				ID:    user.ID,
 				Email: user.Email,
 			},
 			userAgent,
@@ -163,16 +162,12 @@ func (s *Service) RefreshSession(
 		qtx.ReplaceRefreshToken(
 			refreshCtx,
 			db.ReplaceRefreshTokenParams{
-				TokenHash:
-					hashedToken,
+				TokenHash: hashedToken,
 
-				ReplacedByToken:
-					pgtype.Text{
-						String:
-							newTokenHash,
-						Valid:
-							true,
-					},
+				ReplacedByToken: pgtype.Text{
+					String: newTokenHash,
+					Valid:  true,
+				},
 			},
 		)
 

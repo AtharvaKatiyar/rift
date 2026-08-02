@@ -17,18 +17,15 @@ func TestRegisterRequest() auth.RegisterRequest {
 			UnixNano()
 
 	return auth.RegisterRequest{
-		Username:
-			fmt.Sprintf(
-				"user_%d",
-				id,
-			),
-		Email:
-			fmt.Sprintf(
-				"user_%d@test.com",
-				id,
-			),
-		Password:
-			"StrongPass123!",
+		Username: fmt.Sprintf(
+			"user_%d",
+			id,
+		),
+		Email: fmt.Sprintf(
+			"user_%d@test.com",
+			id,
+		),
+		Password: "StrongPass123!",
 	}
 }
 
@@ -37,20 +34,16 @@ func TestLoginRequest(
 ) auth.LoginRequest {
 
 	return auth.LoginRequest{
-		Email: email,
-		Password:
-			"StrongPass123!",
+		Email:    email,
+		Password: "StrongPass123!",
 	}
 }
 
 func TestCreateLinkRequest() links.CreateLinkRequest {
 
 	return links.CreateLinkRequest{
-		Title:
-			"Google",
-		Slug:
-			uuid.NewString()[:8],
-		TargetURL:
-			"https://google.com",
+		Title:     "Google",
+		Slug:      uuid.NewString()[:8],
+		TargetURL: "https://google.com",
 	}
 }

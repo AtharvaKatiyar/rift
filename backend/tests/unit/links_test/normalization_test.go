@@ -16,116 +16,74 @@ func TestNormalizeSlug(
 		expected string
 	}{
 		{
-			name:
-				"already normalized",
-			input:
-				"my-slug",
-			expected:
-				"my-slug",
+			name:     "already normalized",
+			input:    "my-slug",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"trim spaces",
-			input:
-				"   my-slug   ",
-			expected:
-				"my-slug",
+			name:     "trim spaces",
+			input:    "   my-slug   ",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"convert uppercase to lowercase",
-			input:
-				"My-Slug",
-			expected:
-				"my-slug",
+			name:     "convert uppercase to lowercase",
+			input:    "My-Slug",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"replace spaces with hyphens",
-			input:
-				"my custom slug",
-			expected:
-				"my-custom-slug",
+			name:     "replace spaces with hyphens",
+			input:    "my custom slug",
+			expected: "my-custom-slug",
 		},
 		{
-			name:
-				"collapse multiple hyphens",
-			input:
-				"my---slug",
-			expected:
-				"my-slug",
+			name:     "collapse multiple hyphens",
+			input:    "my---slug",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"collapse multiple underscores",
-			input:
-				"my___slug",
-			expected:
-				"my-slug",
+			name:     "collapse multiple underscores",
+			input:    "my___slug",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"collapse mixed separators",
-			input:
-				"my-_--__slug",
-			expected:
-				"my-slug",
+			name:     "collapse mixed separators",
+			input:    "my-_--__slug",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"trim leading separators",
-			input:
-				"---my-slug",
-			expected:
-				"my-slug",
+			name:     "trim leading separators",
+			input:    "---my-slug",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"trim trailing separators",
-			input:
-				"my-slug___",
-			expected:
-				"my-slug",
+			name:     "trim trailing separators",
+			input:    "my-slug___",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"trim both sides",
-			input:
-				"___my-slug---",
-			expected:
-				"my-slug",
+			name:     "trim both sides",
+			input:    "___my-slug---",
+			expected: "my-slug",
 		},
 		{
-			name:
-				"mixed ugly slug",
-			input:
-				"  My___Awesome---SLUG  ",
-			expected:
-				"my-awesome-slug",
+			name:     "mixed ugly slug",
+			input:    "  My___Awesome---SLUG  ",
+			expected: "my-awesome-slug",
 		},
 		{
-			name:
-				"single word",
-			input:
-				"Rift",
-			expected:
-				"rift",
+			name:     "single word",
+			input:    "Rift",
+			expected: "rift",
 		},
 		{
-			name:
-				"empty string",
-			input:
-				"",
-			expected:
-				"",
+			name:     "empty string",
+			input:    "",
+			expected: "",
 		},
 		{
-			name:
-				"spaces only",
-			input:
-				"     ",
-			expected:
-				"",
+			name:     "spaces only",
+			input:    "     ",
+			expected: "",
 		},
 	}
 

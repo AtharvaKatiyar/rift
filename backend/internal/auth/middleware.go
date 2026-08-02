@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"net/http"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 func AuthMiddleware(
@@ -30,11 +30,9 @@ func AuthMiddleware(
 				c.JSON(
 					http.StatusUnauthorized,
 					gin.H{
-						"error":
-							"access token expired",
+						"error": "access token expired",
 
-						"requires_refresh":
-							true,
+						"requires_refresh": true,
 					},
 				)
 
@@ -46,8 +44,7 @@ func AuthMiddleware(
 			c.JSON(
 				http.StatusUnauthorized,
 				gin.H{
-					"error":
-						"unauthorized",
+					"error": "unauthorized",
 				},
 			)
 
@@ -75,11 +72,9 @@ func AuthMiddleware(
 				c.JSON(
 					http.StatusUnauthorized,
 					gin.H{
-						"error":
-							"access token expired",
+						"error": "access token expired",
 
-						"requires_refresh":
-							true,
+						"requires_refresh": true,
 					},
 				)
 
@@ -91,8 +86,7 @@ func AuthMiddleware(
 			c.JSON(
 				http.StatusUnauthorized,
 				gin.H{
-					"error":
-						"invalid token",
+					"error": "invalid token",
 				},
 			)
 

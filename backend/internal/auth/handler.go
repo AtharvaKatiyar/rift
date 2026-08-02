@@ -1,15 +1,15 @@
 package auth
 
 import (
-	"net/http"
 	"errors"
-	"github.com/AtharvaKatiyar/rift/internal/utils"
 	"github.com/AtharvaKatiyar/rift/internal/httpx"
+	"github.com/AtharvaKatiyar/rift/internal/utils"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type Handler struct {
-	Service 	 *Service
+	Service      *Service
 	IsProduction bool
 }
 
@@ -23,8 +23,6 @@ func (h *Handler) Register(
 		&req,
 	); err != nil {
 
-
-
 		httpx.BadRequest(
 			c,
 			err,
@@ -34,16 +32,16 @@ func (h *Handler) Register(
 	}
 
 	accessToken,
-	refreshToken,
-	err := h.Service.Register(
+		refreshToken,
+		err := h.Service.Register(
 		c.Request.Context(),
 		req,
 		c.Request.UserAgent(),
 		c.ClientIP(),
 	)
-	
+
 	if err != nil {
-		
+
 		httpx.BadRequest(
 			c,
 			err,
@@ -51,7 +49,7 @@ func (h *Handler) Register(
 
 		return
 	}
-	
+
 	err = SetSessionResponse(
 		c,
 		accessToken,
@@ -95,14 +93,13 @@ func (h *Handler) Login(
 	}
 
 	accessToken,
-	refreshToken,
-	err := h.Service.Login(
+		refreshToken,
+		err := h.Service.Login(
 		c.Request.Context(),
 		req,
 		c.Request.UserAgent(),
-		c.ClientIP(),	
+		c.ClientIP(),
 	)
-
 
 	if err != nil {
 
@@ -119,7 +116,6 @@ func (h *Handler) Login(
 		refreshToken,
 		h.IsProduction,
 	)
-
 
 	if err != nil {
 
@@ -207,9 +203,9 @@ func (h *Handler) Me(
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"id": user.ID,
-			"email": user.Email,
-			"username": user.Username,
+			"id":             user.ID,
+			"email":          user.Email,
+			"username":       user.Username,
 			"email_verified": user.EmailVerified,
 		},
 	)
@@ -282,7 +278,7 @@ func (h *Handler) Refresh(
 		http.StatusOK,
 		"session refreshed",
 	)
-	}
+}
 
 func (h *Handler) Logout(
 	c *gin.Context,
@@ -377,37 +373,37 @@ func (h *Handler) LogoutAll(
 }
 
 func (h *Handler) ForgotPassword(
-    c *gin.Context,
+	c *gin.Context,
 ) {
 
-    var req ForgotPasswordRequest
+	var req ForgotPasswordRequest
 
-    if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 
-        httpx.BadRequest(
+		httpx.BadRequest(
 			c,
 			err,
 		)
 
-        return
-    }
+		return
+	}
 
-    err := h.Service.ForgotPassword(
-        c.Request.Context(),
-        req,
-    )
+	err := h.Service.ForgotPassword(
+		c.Request.Context(),
+		req,
+	)
 
-    if err != nil {
+	if err != nil {
 
-        httpx.InternalServerError(
+		httpx.InternalServerError(
 			c,
 			err,
 		)
 
-        return
-    }
+		return
+	}
 
-    httpx.Success(
+	httpx.Success(
 		c,
 		http.StatusOK,
 		"If an account exists for that email, a password reset link has been sent.",
@@ -415,29 +411,29 @@ func (h *Handler) ForgotPassword(
 }
 
 func (h *Handler) ResetPassword(
-    c *gin.Context,
+	c *gin.Context,
 ) {
 
-    var req ResetPasswordRequest
+	var req ResetPasswordRequest
 
-    if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 
-        c.JSON(
-            http.StatusBadRequest,
-            gin.H{
-                "error": err.Error(),
-            },
-        )
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{
+				"error": err.Error(),
+			},
+		)
 
-        return
-    }
+		return
+	}
 
-    err := h.Service.ResetPassword(
-        c.Request.Context(),
-        req,
-    )
+	err := h.Service.ResetPassword(
+		c.Request.Context(),
+		req,
+	)
 
-    if err != nil {
+	if err != nil {
 		if errors.Is(
 			err,
 			ErrInvalidResetToken,
@@ -459,12 +455,12 @@ func (h *Handler) ResetPassword(
 		return
 	}
 
-    c.JSON(
-        http.StatusOK,
-        gin.H{
-            "message": "Password reset successful.",
-        },
-    )
+	c.JSON(
+		http.StatusOK,
+		gin.H{
+			"message": "Password reset successful.",
+		},
+	)
 }
 
 func (h *Handler) SendVerificationEmail(

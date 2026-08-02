@@ -19,68 +19,42 @@ func TestLogin(
 		expectedError string
 	}{
 		{
-			name:
-				"successful login",
-			setupUser:
-				true,
-			loginReq:
-				authpkg.LoginRequest{
-					Email:
-						"user@example.com",
-					Password:
-						"StrongPass123!",
-				},
-			expectError:
-				false,
+			name:      "successful login",
+			setupUser: true,
+			loginReq: authpkg.LoginRequest{
+				Email:    "user@example.com",
+				Password: "StrongPass123!",
+			},
+			expectError: false,
 		},
 		{
-			name:
-				"wrong password",
-			setupUser:
-				true,
-			loginReq:
-				authpkg.LoginRequest{
-					Email:
-						"user@example.com",
-					Password:
-						"WrongPassword123!",
-				},
-			expectError:
-				true,
-			expectedError:
-				"invalid credentials",
+			name:      "wrong password",
+			setupUser: true,
+			loginReq: authpkg.LoginRequest{
+				Email:    "user@example.com",
+				Password: "WrongPassword123!",
+			},
+			expectError:   true,
+			expectedError: "invalid credentials",
 		},
 		{
-			name:
-				"nonexistent user",
-			setupUser:
-				false,
-			loginReq:
-				authpkg.LoginRequest{
-					Email:
-						"nouser@example.com",
-					Password:
-						"StrongPass123!",
-				},
-			expectError:
-				true,
-			expectedError:
-				"invalid credentials",
+			name:      "nonexistent user",
+			setupUser: false,
+			loginReq: authpkg.LoginRequest{
+				Email:    "nouser@example.com",
+				Password: "StrongPass123!",
+			},
+			expectError:   true,
+			expectedError: "invalid credentials",
 		},
 		{
-			name:
-				"email normalization",
-			setupUser:
-				true,
-			loginReq:
-				authpkg.LoginRequest{
-					Email:
-						"  USER@EXAMPLE.COM ",
-					Password:
-						"StrongPass123!",
-				},
-			expectError:
-				false,
+			name:      "email normalization",
+			setupUser: true,
+			loginReq: authpkg.LoginRequest{
+				Email:    "  USER@EXAMPLE.COM ",
+				Password: "StrongPass123!",
+			},
+			expectError: false,
 		},
 	}
 
@@ -101,12 +75,9 @@ func TestLogin(
 						service.Register(
 							context.Background(),
 							authpkg.RegisterRequest{
-								Email:
-									"user@example.com",
-								Username:
-									"testuser",
-								Password:
-									"StrongPass123!",
+								Email:    "user@example.com",
+								Username: "testuser",
+								Password: "StrongPass123!",
 							},
 							"register-agent",
 							"127.0.0.1",
@@ -285,12 +256,9 @@ func TestLogin_CreatesNewSessionEachTime(
 		service.Register(
 			context.Background(),
 			authpkg.RegisterRequest{
-				Email:
-					"user@example.com",
-				Username:
-					"testuser",
-				Password:
-					"StrongPass123!",
+				Email:    "user@example.com",
+				Username: "testuser",
+				Password: "StrongPass123!",
 			},
 			"register-agent",
 			"127.0.0.1",
@@ -307,10 +275,8 @@ func TestLogin_CreatesNewSessionEachTime(
 		service.Login(
 			context.Background(),
 			authpkg.LoginRequest{
-				Email:
-					"user@example.com",
-				Password:
-					"StrongPass123!",
+				Email:    "user@example.com",
+				Password: "StrongPass123!",
 			},
 			"agent-1",
 			"127.0.0.1",
@@ -327,10 +293,8 @@ func TestLogin_CreatesNewSessionEachTime(
 		service.Login(
 			context.Background(),
 			authpkg.LoginRequest{
-				Email:
-					"user@example.com",
-				Password:
-					"StrongPass123!",
+				Email:    "user@example.com",
+				Password: "StrongPass123!",
 			},
 			"agent-2",
 			"127.0.0.2",

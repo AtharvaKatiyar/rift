@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"net/http"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 const (
@@ -20,48 +20,40 @@ func SetAuthCookies(
 	http.SetCookie(
 		c.Writer,
 		&http.Cookie{
-			Name:
-				accessCookieName,
-			Value:
-				accessToken,
-			Path: "/",
+			Name:  accessCookieName,
+			Value: accessToken,
+			Path:  "/",
 			MaxAge: int(
 				AccessTokenDuration.Seconds(),
 			),
 			HttpOnly: true,
-			Secure:
-				isProduction,
-			SameSite:
-				func() http.SameSite{
-					if isProduction {
-						return http.SameSiteStrictMode
-					}
-					return http.SameSiteLaxMode
-				}(),
+			Secure:   isProduction,
+			SameSite: func() http.SameSite {
+				if isProduction {
+					return http.SameSiteStrictMode
+				}
+				return http.SameSiteLaxMode
+			}(),
 		},
 	)
 
 	http.SetCookie(
 		c.Writer,
 		&http.Cookie{
-			Name:
-				refreshCookieName,
-			Value:
-				refreshToken,
-			Path: "/",
+			Name:  refreshCookieName,
+			Value: refreshToken,
+			Path:  "/",
 			MaxAge: int(
 				RefreshTokenDuration.Seconds(),
 			),
 			HttpOnly: true,
-			Secure:
-				isProduction,
-			SameSite:
-				func() http.SameSite{
-					if isProduction {
-						return http.SameSiteStrictMode
-					}
-					return http.SameSiteLaxMode
-				}(),
+			Secure:   isProduction,
+			SameSite: func() http.SameSite {
+				if isProduction {
+					return http.SameSiteStrictMode
+				}
+				return http.SameSiteLaxMode
+			}(),
 		},
 	)
 }
@@ -73,42 +65,36 @@ func ClearAuthCookies(
 	http.SetCookie(
 		c.Writer,
 		&http.Cookie{
-			Name:
-				accessCookieName,
-			Value: "",
-			Path: "/",
-			MaxAge: -1,
+			Name:     accessCookieName,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
 			HttpOnly: true,
-			Secure:
-				isProduction,
-			SameSite:
-				func() http.SameSite{
-					if isProduction {
-						return http.SameSiteStrictMode
-					}
-					return http.SameSiteLaxMode
-				}(),
+			Secure:   isProduction,
+			SameSite: func() http.SameSite {
+				if isProduction {
+					return http.SameSiteStrictMode
+				}
+				return http.SameSiteLaxMode
+			}(),
 		},
 	)
 
 	http.SetCookie(
 		c.Writer,
 		&http.Cookie{
-			Name:
-				refreshCookieName,
-			Value: "",
-			Path: "/",
-			MaxAge: -1,
+			Name:     refreshCookieName,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
 			HttpOnly: true,
-			Secure:
-				isProduction,
-			SameSite:
-				func() http.SameSite{
-					if isProduction {
-						return http.SameSiteStrictMode
-					}
-					return http.SameSiteLaxMode
-				}(),
+			Secure:   isProduction,
+			SameSite: func() http.SameSite {
+				if isProduction {
+					return http.SameSiteStrictMode
+				}
+				return http.SameSiteLaxMode
+			}(),
 		},
 	)
 }
