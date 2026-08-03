@@ -42,6 +42,46 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
 }
 
 /**
+ * Parse validation error messages from Go's validator package
+ */
+function parseValidationError(errorStr: string): string {
+  // Handle Go validator errors like:
+  // "Key: 'LoginRequest.Email' Error:Field validation for 'Email' failed on the 'required' tag"
+  const requiredMatch = errorStr.match(/Error:Field validation for '(\w+)' failed on the 'required' tag/);
+  if (requiredMatch) {
+    const field = requiredMatch[1].toLowerCase();
+    return `${field.charAt(0).toUpperCase() + field.slice(1)} is required.`;
+  }
+
+  const emailMatch = errorStr.match(/Error:Field validation for '(\w+)' failed on the 'email' tag/);
+  if (emailMatch) {
+    return "Please enter a valid email address.";
+  }
+
+  const minMatch = errorStr.match(/Error:Field validation for '(\w+)' failed on the 'min' tag/);
+  if (minMatch) {
+    const field = minMatch[1].toLowerCase();
+    return `${field.charAt(0).toUpperCase() + field.slice(1)} is too short.`;
+  }
+
+  const maxMatch = errorStr.match(/Error:Field validation for '(\w+)' failed on the 'max' tag/);
+  if (maxMatch) {
+    const field = maxMatch[1].toLowerCase();
+    return `${field.charAt(0).toUpperCase() + field.slice(1)} is too long.`;
+  }
+
+  // Handle multiple validation errors - just show the first one
+  if (errorStr.includes("Key:") && errorStr.includes("Error:")) {
+    const firstError = errorStr.split("Key:")[1];
+    if (firstError) {
+      return parseValidationError("Key:" + firstError);
+    }
+  }
+
+  return errorStr;
+}
+
+/**
  * Map raw API/network errors to user-friendly messages.
  */
 export function mapApiError(status: number, body: Record<string, unknown>): string {
@@ -49,11 +89,18 @@ export function mapApiError(status: number, body: Record<string, unknown>): stri
   if (status === 500 || status === 502 || status === 503) {
     return "Something went wrong on our end. Please try again later.";
   }
-  if (status === 400) {
+  if (status === 400 || status === 401) {
     if (typeof body?.error === "string" && body.error) {
-      return body.error as string;
+      const errorStr = body.error as string;
+      
+      // Check if this is a Go validation error
+      if (errorStr.includes("Key:") && errorStr.includes("Error:Field validation")) {
+        return parseValidationError(errorStr);
+      }
+      
+      return errorStr;
     }
-    return "Please check your details and try again.";
+    return status === 401 ? "Invalid credentials." : "Please check your details and try again.";
   }
   if (typeof body?.error === "string" && body.error) {
     return body.error as string;

@@ -10,6 +10,14 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export function middleware(req: NextRequest) {
   const accessToken = req.cookies.get("access_token");
+  const { pathname } = req.nextUrl;
+
+  if (pathname === "/") {
+    if (accessToken) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+    return NextResponse.next();
+  }
 
   if (!accessToken) {
     const loginUrl = new URL("/auth", req.url);
@@ -20,5 +28,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*"],
+  matcher: ["/", "/dashboard", "/dashboard/:path*"],
 };

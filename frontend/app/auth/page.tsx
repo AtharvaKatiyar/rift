@@ -43,6 +43,10 @@ function Field({
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  const inputType = isPassword && showPassword ? "text" : type;
+
   return (
     <div style={{ marginBottom: 14 }}>
       <label
@@ -59,35 +63,79 @@ function Field({
       >
         {label}
       </label>
-      <input
-        type={type}
-        autoComplete={autoComplete}
-        className="auth-input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        style={{
-          width: "100%",
-          height: 40,
-          padding: "0 14px",
-          fontSize: 14,
-          fontFamily: "Inter, system-ui, sans-serif",
-          background: "var(--auth-field-bg)",
-          border: "var(--auth-field-border)",
-          borderRadius: 4,
-          color: "var(--auth-field-text)",
-          outline: "none",
-          boxSizing: "border-box",
-          transition: "border-color 0.15s, background 0.15s",
-          opacity: disabled ? 0.6 : 1,
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = "var(--auth-field-focus)";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = "";
-        }}
-      />
+      <div style={{ position: "relative" }}>
+        <input
+          type={inputType}
+          autoComplete={autoComplete}
+          className="auth-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          style={{
+            width: "100%",
+            height: 40,
+            padding: isPassword ? "0 40px 0 14px" : "0 14px",
+            fontSize: 14,
+            fontFamily: "Inter, system-ui, sans-serif",
+            background: "var(--auth-field-bg)",
+            border: "var(--auth-field-border)",
+            borderRadius: 4,
+            color: "var(--auth-field-text)",
+            outline: "none",
+            boxSizing: "border-box",
+            transition: "border-color 0.15s, background 0.15s",
+            opacity: disabled ? 0.6 : 1,
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--auth-field-focus)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "";
+          }}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            disabled={disabled}
+            style={{
+              position: "absolute",
+              right: 10,
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              cursor: disabled ? "not-allowed" : "pointer",
+              padding: 4,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--auth-text-secondary)",
+              opacity: disabled ? 0.4 : 1,
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (!disabled) e.currentTarget.style.color = "var(--auth-text-primary)";
+            }}
+            onMouseLeave={(e) => {
+              if (!disabled) e.currentTarget.style.color = "var(--auth-text-secondary)";
+            }}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -116,12 +164,13 @@ export default function AuthPage() {
     if (searchParams.get("tab") === "register") setTab("register");
   }, [searchParams]);
 
-  // If already authenticated, send to dashboard
+  // If already authenticated, send to dashboard or redirect
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/dashboard");
+      const redirectUrl = searchParams.get("redirect") || "/dashboard";
+      router.replace(redirectUrl);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, searchParams]);
 
   // Clear error when tab changes
   useEffect(() => {
@@ -143,7 +192,8 @@ export default function AuthPage() {
         return;
       }
       await refetch();
-      router.replace("/dashboard");
+      const redirectUrl = searchParams.get("redirect") || "/dashboard";
+      router.replace(redirectUrl);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -170,7 +220,8 @@ export default function AuthPage() {
         return;
       }
       await refetch();
-      router.replace("/dashboard");
+      const redirectUrl = searchParams.get("redirect") || "/dashboard";
+      router.replace(redirectUrl);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -268,6 +319,46 @@ export default function AuthPage() {
                 </span>
               </a>
             </div>
+
+            {/* Session expired banner */}
+            {searchParams.get("reason") === "session_expired" && !error && (
+              <div
+                style={{
+                  marginBottom: 24,
+                  background: "var(--auth-field-bg)",
+                  border: "1px solid var(--auth-field-border)",
+                  borderLeft: "3px solid #C79A3E",
+                  borderRadius: 4,
+                  padding: "12px 16px",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 12,
+                }}
+              >
+                <p style={{
+                  margin: 0,
+                  fontSize: 13,
+                  fontFamily: "Inter, system-ui, sans-serif",
+                  color: "var(--auth-text-primary)",
+                  lineHeight: 1.5,
+                  flex: 1,
+                }}>
+                  Your session expired. Please sign in again.
+                </p>
+                <button
+                  onClick={() => router.replace("/auth")}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: 0, fontSize: 16, lineHeight: 1,
+                    color: "var(--auth-text-secondary)", transition: "color 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "var(--auth-text-primary)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "var(--auth-text-secondary)"; }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
             {/* heading */}
             <h1

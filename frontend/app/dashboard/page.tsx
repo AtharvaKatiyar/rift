@@ -1,448 +1,339 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
+/**
+ * app/dashboard/page.tsx
+ *
+ * Orchestrator: owns all state + data fetching. Children receive only props.
+ * All mutations (create, edit, toggle, delete) are handled here and passed
+ * as callbacks so child components remain purely presentational.
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { useDashboardUser } from "./layout";
+import { StatsRow } from "@/components/dashboard/StatCard";
+import { LinksSection } from "@/components/dashboard/LinksSection";
+import { LinkModal } from "@/components/dashboard/LinkModal";
+import { useErrorBanner } from "@/components/dashboard/ErrorBanner";
+import type { LinkRecord, Pagination, SubscriptionResponse } from "@/types/dashboard";
 
-/* ─── Spinner ─── */
-function Spinner() {
+// ─── Skeleton primitives ──────────────────────────────────────────────────────
+
+function Sk({ w = "100%", h = 16, r = 4 }: { w?: string | number; h?: number; r?: number }) {
   return (
-    <span
-      style={{
-        display: "inline-block",
-        width: 14,
-        height: 14,
-        border: "2px solid currentColor",
-        borderTopColor: "transparent",
-        borderRadius: "50%",
-        animation: "rift-spin 0.7s linear infinite",
-        verticalAlign: "middle",
-        marginRight: 6,
-      }}
-    />
+    <div aria-hidden style={{
+      width: w, height: h, borderRadius: r,
+      background: "var(--surface)",
+      animation: "dash-pulse 1.5s ease-in-out infinite alternate",
+      flexShrink: 0,
+    }} />
   );
 }
 
-/* ─── Skeleton block ─── */
-function Skeleton({ width = "100%", height = 20 }: { width?: string | number; height?: number }) {
+function DashboardSkeleton() {
   return (
-    <div
-      style={{
-        width,
-        height,
-        borderRadius: 4,
-        background: "var(--surface)",
-        animation: "rift-pulse 1.6s ease-in-out infinite",
-      }}
-    />
+    <main aria-busy="true" style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ marginBottom: 36 }}>
+        <Sk w={220} h={30} /><div style={{ marginTop: 10 }}><Sk w={180} h={14} /></div>
+      </div>
+      {/* Stat card skeletons */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16, marginBottom: 32 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 4, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <Sk w={70} h={10} /><Sk w={50} h={28} /><Sk w={100} h={11} />
+          </div>
+        ))}
+      </div>
+      {/* Header skeleton */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+        <Sk w={140} h={26} /><Sk w={88} h={34} r={4} />
+      </div>
+      {/* Row skeletons */}
+      {[0, 1, 2, 3, 4].map(i => (
+        <div key={i} style={{ borderBottom: "0.5px solid var(--border)", padding: "18px 0", display: "grid", gridTemplateColumns: "minmax(180px, 260px) minmax(0, 1fr) auto", gap: "0 24px", alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            <Sk w="65%" h={14} /><Sk w="85%" h={11} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <Sk w={100} h={10} /><Sk w="90%" h={13} />
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Sk w={58} h={18} /><Sk w={30} h={18} /><Sk w={58} h={18} /><Sk w={44} h={18} />
+          </div>
+        </div>
+      ))}
+    </main>
   );
 }
+
+function DashboardError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 24px", gap: 20, minHeight: "60vh" }}>
+      <p style={{ fontFamily: "Fraunces, Georgia, serif", fontWeight: 300, fontSize: 24, color: "var(--text)", margin: 0 }}>
+        Failed to load your dashboard.
+      </p>
+      <p style={{ fontSize: 13.5, color: "var(--muted)", fontFamily: "Inter, system-ui, sans-serif", margin: 0 }}>
+        There was a problem fetching your data. Please try again.
+      </p>
+      <button
+        id="dashboard-retry-btn" onClick={onRetry}
+        style={{ marginTop: 8, padding: "9px 22px", fontFamily: "Inter, system-ui, sans-serif", fontSize: 13.5, fontWeight: 500, color: "var(--bg)", background: "var(--text)", border: "none", borderRadius: 4, cursor: "pointer", transition: "opacity 0.15s" }}
+        onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
+        onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+      >
+        Try again
+      </button>
+    </main>
+  );
+}
+
+// ─── Flash message ────────────────────────────────────────────────────────────
+
+function Flash({ message }: { message: string }) {
+  return (
+    <div style={{
+      padding: "10px 16px", marginBottom: 16,
+      background: "rgba(58,138,82,0.10)",
+      border: "0.5px solid rgba(58,138,82,0.3)",
+      borderRadius: 4, fontSize: 13.5,
+      fontFamily: "Inter, system-ui, sans-serif",
+      color: "#3a8a52",
+      animation: "dash-flash-out 2.5s ease forwards",
+    }}>
+      {message}
+    </div>
+  );
+}
+
+// ─── Dashboard page ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+  const { user } = useDashboardUser();
+  const { showError } = useErrorBanner();
   const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/auth");
+  // Data state
+  const [rows, setRows] = useState<LinkRecord[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // UI state
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [flash, setFlash] = useState<{ msg: string; key: number } | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Fetch helpers ────────────────────────────────────────────────────────────
+
+  const fetchLinks = useCallback(async (page: number) => {
+    const res = await fetch(`/api/proxy/links?page=${page}&page_size=10`, { credentials: "include" });
+    if (res.status === 401) {
+      window.location.href = "/auth?reason=session_expired";
+      throw new Error("unauthorized");
     }
-  }, [user, loading, router]);
+    if (res.status === 429) {
+      showError("Too many requests. Please slow down.");
+      throw new Error("rate limit");
+    }
+    if (!res.ok) {
+      showError("Connection error. Check your internet and try again.");
+      throw new Error("links");
+    }
+    const json = await res.json();
+    setRows(json.links ?? []);
+    setPagination(json.pagination ?? null);
+  }, [showError]);
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    await logout();
+  const fetchSubscription = useCallback(async () => {
+    const res = await fetch("/api/proxy/subscription", { credentials: "include" });
+    if (!res.ok) throw new Error("subscription");
+    const json = await res.json();
+    setSubscription(json);
+  }, []);
+
+  const fetchAll = useCallback(async (page = 1) => {
+    setFetchError(false);
+    setLoading(true);
+    try {
+      await Promise.all([fetchLinks(page), fetchSubscription()]);
+    } catch {
+      setFetchError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchLinks, fetchSubscription]);
+
+  // Read initial page from URL on mount
+  useEffect(() => {
+    const p = parseInt(new URLSearchParams(window.location.search).get("page") ?? "1", 10);
+    const page = isNaN(p) || p < 1 ? 1 : p;
+    setCurrentPage(page);
+    fetchAll(page);
+  }, [fetchAll]);
+
+  // ── Flash helper ─────────────────────────────────────────────────────────────
+
+  const showFlash = (msg: string) => {
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    setFlash({ msg, key: Date.now() });
+    flashTimer.current = setTimeout(() => setFlash(null), 2700);
   };
+
+  // ── Mutation handlers ─────────────────────────────────────────────────────────
+
+  const handleModalSuccess = useCallback(async (msg: string) => {
+    showFlash(msg);
+    await Promise.all([fetchLinks(currentPage), fetchSubscription()]);
+  }, [fetchLinks, fetchSubscription, currentPage]);
+
+  const handleToggle = useCallback(async (id: string) => {
+    // Optimistic update
+    setRows(prev => prev.map(l => l.ID === id ? { ...l, IsActive: !l.IsActive } : l));
+    try {
+      const res = await fetch(`/api/proxy/links/${id}/status`, { method: "PATCH", credentials: "include" });
+      if (res.status === 401) {
+        window.location.href = "/auth?reason=session_expired";
+        return;
+      }
+      if (res.status === 404) {
+        setRows(prev => prev.filter(l => l.ID !== id));
+        showError("That link no longer exists and has been removed.");
+        return;
+      }
+      if (res.status === 429) {
+        setRows(prev => prev.map(l => l.ID === id ? { ...l, IsActive: !l.IsActive } : l));
+        showError("Too many requests. Please slow down.");
+        return;
+      }
+      if (!res.ok) {
+        // Revert on failure
+        setRows(prev => prev.map(l => l.ID === id ? { ...l, IsActive: !l.IsActive } : l));
+        showError("Failed to update link status.");
+      }
+    } catch {
+      setRows(prev => prev.map(l => l.ID === id ? { ...l, IsActive: !l.IsActive } : l));
+      showError("Connection error. Check your internet and try again.");
+    }
+  }, [showError]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/proxy/links/${id}`, { method: "DELETE", credentials: "include" });
+      if (res.status === 401) {
+        window.location.href = "/auth?reason=session_expired";
+        return;
+      }
+      if (res.status === 404) {
+        setRows(prev => prev.filter(l => l.ID !== id));
+        showError("That link no longer exists and has been removed.");
+        return;
+      }
+      if (res.status === 429) {
+        showError("Too many requests. Please slow down.");
+        return;
+      }
+      if (res.ok) {
+        setRows(prev => prev.filter(l => l.ID !== id));
+        // Refresh subscription so links_used updates
+        fetchSubscription();
+      } else {
+        showError("Failed to delete link.");
+      }
+    } catch {
+      showError("Connection error. Check your internet and try again.");
+    }
+  }, [fetchSubscription, showError]);
+
+  const handlePageChange = useCallback(async (page: number) => {
+    window.history.replaceState({}, "", `?page=${page}`);
+    setCurrentPage(page);
+    await fetchLinks(page);
+  }, [fetchLinks]);
+
+  const handleCreateOpen = () => {
+    if (subscription?.can_create_links) {
+      setCreateOpen(true);
+    } else {
+      router.push("/dashboard/upgrade");
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <>
-        <style>{`
-          @keyframes rift-spin { to { transform: rotate(360deg); } }
-          @keyframes rift-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        `}</style>
-        <main style={{ minHeight: "100vh", background: "var(--bg)" }}>
-          {/* Navbar skeleton */}
-          <nav style={{
-            height: 56,
-            borderBottom: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            padding: "0 24px",
-            gap: 12,
-          }}>
-            <Skeleton width={80} height={18} />
-          </nav>
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
-            <Skeleton width={200} height={28} />
-            <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-              <Skeleton height={100} />
-              <Skeleton height={100} />
-              <Skeleton height={100} />
-            </div>
-          </div>
-        </main>
+        <style>{`@keyframes dash-pulse { from { opacity: 1; } to { opacity: 0.5; } }`}</style>
+        <DashboardSkeleton />
       </>
     );
   }
 
-  if (!user) return null;
+  if (fetchError || !subscription) {
+    return <DashboardError onRetry={() => fetchAll(currentPage)} />;
+  }
 
-  const initials = user.username
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const totalClicks = rows.reduce((s, l) => s + (l.ClickCount ?? 0), 0);
 
   return (
     <>
       <style>{`
-        @keyframes rift-spin { to { transform: rotate(360deg); } }
-        @keyframes rift-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        @keyframes rift-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-        .dash-stat-card {
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: 4px;
-          padding: 20px 22px;
-          transition: border-color 0.15s;
-        }
-        .dash-stat-card:hover { border-color: var(--border-mid); }
-
-        .dash-nav-btn {
-          background: none;
-          border: 1px solid var(--border-mid);
-          border-radius: 4px;
-          padding: 7px 14px;
-          cursor: pointer;
-          font-family: Inter, system-ui, sans-serif;
-          font-size: 13px;
-          color: var(--text);
-          transition: background 0.13s, border-color 0.13s;
-        }
-        .dash-nav-btn:hover { background: var(--surface); border-color: var(--border-mid); }
-        .dash-nav-btn-danger { color: var(--accent); border-color: rgba(166,80,59,0.3); }
-        .dash-nav-btn-danger:hover { background: rgba(166,80,59,0.06); border-color: var(--accent); }
-
-        .overlay {
-          position: fixed; inset: 0; z-index: 100;
-          background: rgba(0,0,0,0.35);
-          display: flex; align-items: center; justify-content: center;
-          padding: 24px;
-          animation: rift-fade-in 0.15s ease;
-        }
-        .modal {
-          background: var(--bg);
-          border: 1px solid var(--border-mid);
-          border-radius: 4px;
-          padding: 32px 36px;
-          max-width: 360px;
-          width: 100%;
-          box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+        @keyframes dash-spin  { to { transform: rotate(360deg); } }
+        @keyframes dash-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        @keyframes dash-modal-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+        @keyframes dash-flash-out { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+        @media (max-width: 700px) {
+          .link-row-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
-        {/* Navbar */}
-        <nav
-          style={{
-            height: 56,
-            borderBottom: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 24px",
-            background: "var(--bg)",
-            position: "sticky",
-            top: 0,
-            zIndex: 50,
-          }}
-        >
-          {/* Logo */}
-          <a
-            href="/"
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}
-          >
-            <Image
-              src="/rift_off_logo.png"
-              alt="Rift"
-              width={36}
-              height={24}
-              style={{ opacity: 0.9 }}
-            />
-            <span
-              style={{
-                fontFamily: "Fraunces, Georgia, serif",
-                fontSize: 16,
-                fontWeight: 300,
-                letterSpacing: "0.05em",
-                color: "var(--text)",
-              }}
-            >
-              Rift
-            </span>
-          </a>
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px", animation: "dash-fade-in 0.25s ease" }}>
 
-          {/* Right side */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Avatar */}
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "var(--border-mid)",
-                border: "1px solid var(--border-mid)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 600,
-                fontFamily: "Inter, system-ui, sans-serif",
-                color: "var(--text)",
-                letterSpacing: "0.04em",
-                flexShrink: 0,
-              }}
-            >
-              {initials}
-            </div>
-            <span
-              style={{
-                fontSize: 13,
-                color: "var(--muted)",
-                fontFamily: "Inter, system-ui, sans-serif",
-                maxWidth: 140,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {user.username}
-            </span>
-
-            <button
-              id="dashboard-logout-btn"
-              className="dash-nav-btn dash-nav-btn-danger"
-              onClick={() => setShowLogoutConfirm(true)}
-            >
-              Sign out
-            </button>
-          </div>
-        </nav>
-
-        {/* Email verification banner — sits directly under navbar */}
-        <VerifyEmailBanner />
-
-        {/* Page body */}
-        <main
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            padding: "40px 24px",
-            animation: "rift-fade-in 0.25s ease",
-          }}
-        >
-          {/* Welcome header */}
-          <div style={{ marginBottom: 36 }}>
-            <h1
-              style={{
-                fontFamily: "Fraunces, Georgia, serif",
-                fontWeight: 300,
-                fontSize: 30,
-                color: "var(--text)",
-                marginBottom: 6,
-                lineHeight: 1.2,
-              }}
-            >
-              Welcome, <em>{user.username}</em>
-            </h1>
-            <p
-              style={{
-                fontSize: 13.5,
-                color: "var(--muted)",
-                fontFamily: "Inter, system-ui, sans-serif",
-              }}
-            >
-              {user.email}
-              {!user.email_verified && (
-                <span
-                  style={{
-                    display: "inline-block",
-                    marginLeft: 10,
-                    fontSize: 11,
-                    fontWeight: 500,
-                    background: "rgba(166,80,59,0.12)",
-                    color: "var(--accent)",
-                    padding: "2px 7px",
-                    borderRadius: 20,
-                    letterSpacing: "0.04em",
-                    verticalAlign: "middle",
-                  }}
-                >
-                  UNVERIFIED
-                </span>
-              )}
-            </p>
-          </div>
-
-          {/* Stat cards */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 16,
-              marginBottom: 40,
-            }}
-          >
-            <StatCard label="Total Links" value="—" hint="Create your first link" />
-            <StatCard label="Total Clicks" value="—" hint="Across all your links" />
-            <StatCard label="Plan" value="Free" hint="Upgrade anytime" />
-          </div>
-
-          {/* Coming soon placeholder */}
-          <div
-            style={{
-              border: "1px dashed var(--border-mid)",
-              borderRadius: 4,
-              padding: "48px 32px",
-              textAlign: "center",
-            }}
-          >
-            <p
-              style={{
-                fontFamily: "Fraunces, Georgia, serif",
-                fontWeight: 300,
-                fontSize: 22,
-                color: "var(--text)",
-                marginBottom: 8,
-              }}
-            >
-              Your links will appear here
-            </p>
-            <p
-              style={{
-                fontSize: 13.5,
-                color: "var(--muted)",
-                fontFamily: "Inter, system-ui, sans-serif",
-                maxWidth: 360,
-                margin: "0 auto",
-                lineHeight: 1.55,
-              }}
-            >
-              Rift lets you create permanent short links that you can update anytime without breaking existing shares.
-            </p>
-          </div>
-        </main>
-      </div>
-
-      {/* Logout confirmation modal */}
-      {showLogoutConfirm && (
-        <div className="overlay" onClick={() => setShowLogoutConfirm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2
-              style={{
-                fontFamily: "Fraunces, Georgia, serif",
-                fontWeight: 300,
-                fontSize: 22,
-                color: "var(--text)",
-                marginBottom: 8,
-              }}
-            >
-              Sign out?
-            </h2>
-            <p
-              style={{
-                fontSize: 13.5,
-                color: "var(--muted)",
-                fontFamily: "Inter, system-ui, sans-serif",
-                marginBottom: 24,
-                lineHeight: 1.5,
-              }}
-            >
-              You&apos;ll be taken back to the sign in page.
-            </p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                id="dashboard-logout-cancel"
-                className="dash-nav-btn"
-                onClick={() => setShowLogoutConfirm(false)}
-                disabled={loggingOut}
-              >
-                Cancel
-              </button>
-              <button
-                id="dashboard-logout-confirm"
-                className="dash-nav-btn dash-nav-btn-danger"
-                onClick={handleLogout}
-                disabled={loggingOut}
-                style={{
-                  opacity: loggingOut ? 0.7 : 1,
-                  cursor: loggingOut ? "not-allowed" : "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                }}
-              >
-                {loggingOut && <Spinner />}
-                Sign out
-              </button>
-            </div>
-          </div>
+        {/* Welcome */}
+        <div style={{ marginBottom: 40 }}>
+          <h1 style={{ fontFamily: "Fraunces, Georgia, serif", fontWeight: 300, fontSize: 32, color: "var(--text)", margin: "0 0 6px", lineHeight: 1.2 }}>
+            Welcome, <em style={{ fontStyle: "italic" }}>{user?.username}</em>
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--muted)", fontFamily: "Inter, system-ui, sans-serif", margin: 0 }}>
+            {user?.email}
+          </p>
         </div>
-      )}
-    </>
-  );
-}
 
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="dash-stat-card">
-      <p
-        style={{
-          fontSize: 11,
-          fontWeight: 500,
-          color: "var(--muted)",
-          letterSpacing: "0.07em",
-          textTransform: "uppercase",
-          fontFamily: "Inter, system-ui, sans-serif",
-          marginBottom: 8,
-        }}
-      >
-        {label}
-      </p>
-      <p
-        style={{
-          fontSize: 26,
-          fontFamily: "Fraunces, Georgia, serif",
-          fontWeight: 300,
-          color: "var(--text)",
-          marginBottom: 4,
-          lineHeight: 1,
-        }}
-      >
-        {value}
-      </p>
-      <p
-        style={{
-          fontSize: 12,
-          color: "var(--faint)",
-          fontFamily: "Inter, system-ui, sans-serif",
-        }}
-      >
-        {hint}
-      </p>
-    </div>
+        {/* Stats */}
+        <StatsRow
+          totalItems={pagination?.total_items ?? 0}
+          totalClicks={totalClicks}
+          subscription={subscription}
+          onCreateOpen={handleCreateOpen}
+          onUpgradeClick={() => router.push("/dashboard/upgrade")}
+        />
+
+        {/* Flash */}
+        {flash && <Flash key={flash.key} message={flash.msg} />}
+
+        {/* Links */}
+        <LinksSection
+          rows={rows}
+          pagination={pagination}
+          username={user?.username ?? ""}
+          currentPage={currentPage}
+          onEdit={link => router.push(`/dashboard/links/${link.ID}`)}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
+          onPageChange={handlePageChange}
+          onCreateOpen={handleCreateOpen}
+        />
+      </main>
+
+      {/* Modals & Panels */}
+      <LinkModal
+        open={createOpen}
+        editLink={null}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={handleModalSuccess}
+      />
+    </>
   );
 }
