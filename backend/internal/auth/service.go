@@ -413,13 +413,6 @@ func (s *Service) ForgotPassword(
 	}
 
 	logger.Log.Info("Deleted expired tokens")
-	if err != nil {
-		logger.Log.Error(
-			"Error: Something failed",
-			zap.Error(err),
-		)
-		return err
-	}
 
 	err =
 		txQueries.DeletePasswordResetTokensForUser(
