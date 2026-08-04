@@ -7,8 +7,6 @@ type Plan struct {
 	Features []string
 }
 
-package subscription
-
 var Plans = map[string]Plan{
 	PlanFree: {
 		Name:  "free",
