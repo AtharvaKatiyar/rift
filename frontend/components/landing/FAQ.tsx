@@ -9,52 +9,52 @@ interface FAQItem {
 
 const faqs: FAQItem[] = [
   {
-    question: "How does Rift differ from other link shorteners?",
-    answer: "Rift is built specifically for developers and teams, offering advanced analytics, API access, custom domains, and powerful integrations. Unlike basic shorteners, we provide real-time click tracking, geographic data, device information, and seamless team collaboration features."
+    question: "What is Rift?",
+    answer: "Rift is a Central Link Infrastructure Platform. Instead of sharing destination URLs directly, Rift gives every important task its own permanent public link that serves as a stable entry point while destinations behind it can be updated anytime. Think of it as permanent addresses for your ever-changing content."
   },
   {
-    question: "Can I use my own custom domain?",
-    answer: "Yes! Pro and Enterprise plans support custom domains. You can use your own branded domain for all your shortened links, maintaining your brand identity while leveraging Rift's powerful infrastructure."
+    question: "What are 'permanent links' and how do they work?",
+    answer: "A permanent link is a stable public URL that never changes, even when you update where it points. For example, your portfolio link stays the same even if you redesign your portfolio five times at different URLs. Everyone who has your Rift link automatically reaches your latest destination."
   },
   {
-    question: "Is there an API available?",
-    answer: "Absolutely. Rift provides a comprehensive REST API with full documentation. You can programmatically create, manage, and track links, integrate with your existing tools, and automate your workflows. API access is available on all paid plans."
-  },
-  {
-    question: "How secure are my links and data?",
-    answer: "Security is our top priority. All data is encrypted in transit and at rest. We use industry-standard security practices including bcrypt password hashing, token-based authentication, and parameterized SQL queries to prevent injection attacks. We're also GDPR compliant."
-  },
-  {
-    question: "What analytics do you provide?",
-    answer: "Rift provides comprehensive analytics including total clicks, unique visitors, geographic location data, device and browser information, referrer sources, and time-series data. You can track campaign performance, understand your audience, and make data-driven decisions."
-  },
-  {
-    question: "Can I manage links as a team?",
-    answer: "Yes! Our Pro and Enterprise plans include team collaboration features. You can invite team members, manage permissions, share link collections, and collaborate on campaigns together."
+    question: "Do my links expire?",
+    answer: "Never. Once you create a Rift link, it's yours permanently. You can update where it points as many times as you want, forever. This is a one-time payment model—no renewals, no expiration."
   },
   {
     question: "What happens if I reach my link limit?",
-    answer: "On the Free plan, you're limited to 100 links. Once you reach this limit, you'll need to upgrade to create more links. Pro plan offers 10,000 links and Enterprise offers unlimited links. All existing links continue to work regardless of your plan."
+    answer: "On the Free plan, you get 30 permanent links. If you need more, you can upgrade to Starter (1,500 links) or Pro (10,000 links) with our early bird pricing. All existing links continue working regardless of your plan."
+  },
+  {
+    question: "Can features or pricing change in the future?",
+    answer: "Your purchased link capacity and access is locked in forever—you'll always have lifetime access to create that many redirecting links at no extra charge. However, advanced features we introduce in the future may require additional purchase. Early bird customers will receive discounted pricing on future premium features."
+  },
+  {
+    question: "What's included in early bird pricing?",
+    answer: "Early bird pricing is our lowest price ever. When you purchase during launch, you lock in that price forever with lifetime access to your links. Future customers may pay more, but your price never increases."
+  },
+  {
+    question: "Can I use my own custom domain?",
+    answer: "Custom domains are on our roadmap for future release. Currently, all links use the rift.dpdns.org domain with readable slugs like /portfolio/ or /resume/."
+  },
+  {
+    question: "Is there an API available?",
+    answer: "API access is planned for a future release. You'll be able to programmatically create and manage your links, integrate with your tools, and automate your workflows."
   },
   {
     question: "Can I export my data?",
-    answer: "Yes, you can export all your link data and analytics at any time in CSV or JSON format. We believe your data belongs to you, and we make it easy to take it with you if needed."
+    answer: "Data export functionality will be available in the next feature rollout. You'll be able to export all your link data and analytics."
   },
   {
-    question: "Do shortened links expire?",
-    answer: "Links don't expire by default, but you have the option to set expiration dates on individual links if needed. You can also pause/unpause links at any time without deleting them."
+    question: "Do you offer refunds?",
+    answer: "Due to the nature of lifetime access, all sales are final. We recommend starting with the Free plan (30 links) to try Rift before upgrading."
+  },
+  {
+    question: "Can I manage links as a team?",
+    answer: "Team collaboration features are on our roadmap. Currently, Rift is designed for individual use with personal link management."
   },
   {
     question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor Stripe. Enterprise plans can also be invoiced annually."
-  },
-  {
-    question: "Can I cancel my subscription anytime?",
-    answer: "Yes, you can cancel your subscription at any time. Your account will remain active until the end of your current billing period. After cancellation, you'll be downgraded to the Free plan."
-  },
-  {
-    question: "Is there a money-back guarantee?",
-    answer: "Yes, we offer a 14-day money-back guarantee on all paid plans. If you're not satisfied for any reason, contact us within 14 days of your purchase for a full refund."
+    answer: "We accept all major credit cards and debit cards through our secure payment processor. Payments are processed in USD or INR depending on your location."
   }
 ];
 
@@ -153,8 +153,7 @@ export default function FAQ() {
               {openIndex === index && (
                 <div
                   style={{
-                    padding: "0 24px 20px 24px",
-                    animation: "fadeIn 0.2s ease"
+                    padding: "0 24px 20px 24px"
                   }}
                 >
                   <p className="font-sans" style={{ 
@@ -171,19 +170,6 @@ export default function FAQ() {
           ))}
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </section>
   );
 }

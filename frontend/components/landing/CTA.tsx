@@ -1,3 +1,5 @@
+"use client";
+
 import { USE_CASES } from "@/data/landing";
 
 export default function CTA() {
@@ -9,9 +11,18 @@ export default function CTA() {
             <div className="font-mono uppercase" style={{ fontSize: 11, letterSpacing: "0.14em", color: "var(--faint)", marginBottom: 24 }}>
               Share once. Update forever.
             </div>
-            <h2 className="font-serif" style={{ fontSize: "clamp(34px,5vw,58px)", lineHeight: 1.08, marginBottom: 28, color: "var(--text)" }}>
+            <h2 className="font-serif" style={{ fontSize: "clamp(34px,5vw,58px)", lineHeight: 1.08, marginBottom: 16, color: "var(--text)" }}>
               Give your next task<br />a link that <em style={{ color: "var(--accent)" }}>outlives it.</em>
             </h2>
+            <p style={{
+              fontFamily: "monospace",
+              fontSize: 13,
+              color: "#8B6914",
+              letterSpacing: "0.04em",
+              marginBottom: 28
+            }}>
+              Launch pricing ends soon — Lock in your discount today
+            </p>
             <p className="font-sans" style={{ fontSize: 16, color: "var(--muted)", lineHeight: 1.7, maxWidth: 460, marginBottom: 40 }}>
               Links shouldn&apos;t expire just because their destinations do. Rift separates the identity of a link from the location it points to.
             </p>

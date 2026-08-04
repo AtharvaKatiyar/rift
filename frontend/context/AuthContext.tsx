@@ -42,9 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         setUser(data as AuthUser);
       } else {
+        // Silently handle 401 - user is just not authenticated, not an error
         setUser(null);
       }
-    } catch {
+    } catch (error) {
+      // Silently handle errors - user is just not authenticated
       setUser(null);
     }
   }, []);

@@ -32,9 +32,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
-      <body className="min-h-full flex flex-col">
-        {/* must be before children so it runs before first paint */}
+      <head>
+        {/* Anti-flash script runs before paint to prevent theme flicker */}
         <script dangerouslySetInnerHTML={{ __html: antiFlash }} />
+      </head>
+      <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>

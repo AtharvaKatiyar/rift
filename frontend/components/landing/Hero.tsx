@@ -1,204 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Navbar from "@/components/common/Navbar";
 
 export default function Hero() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-    if (isMenuOpen) {
-      document.addEventListener("click", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
-  }, [isMenuOpen]);
-
   return (
     <>
-      {/* ── floating nav ─────────────────────────────────────────── */}
-      <nav
-        ref={navRef}
-        className="hero-nav fixed flex items-center justify-between"
-        style={{
-          top: 16, left: 24, right: 24,
-          padding: "12px 32px",
-          zIndex: 50,
-          background: "rgba(255,255,255,0.60)",
-          backdropFilter: "blur(20px) saturate(150%)",
-          WebkitBackdropFilter: "blur(20px) saturate(150%)",
-          border: "1px solid rgba(255,255,255,0.45)",
-          borderRadius: 14,
-          boxShadow: "0 4px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.60)",
-          transition: "background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease",
-        }}
-      >
-        {/* logo */}
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <Image
-            src="/rift_off_logo.png"
-            alt="Rift"
-            width={40}
-            height={27}
-            className="shrink-0"
-            style={{
-              opacity: 0.95,
-              display: "block",
-              width: "40px",
-              height: "auto",
-            }}
-          />
-          <span
-            className="font-serif"
-            style={{
-              fontSize: 22, fontWeight: 300, letterSpacing: "0.05em",
-              color: "rgba(30,28,24,0.90)",
-              transition: "color 0.3s ease",
-            }}
-          >
-            Rift
-          </span>
-        </div>
-
-        {/* nav links */}
-        <div className="hero-nav-links hidden md:flex" style={{ gap: 32 }}>
-          {(["#tasks", "#features"] as const).map((href, i) => (
-            <a
-              key={href}
-              href={href}
-              style={{
-                fontSize: 15,
-                color: "rgba(30,28,24,0.75)",
-                transition: "color 0.3s ease",
-              }}
-            >
-              {i === 0 ? "How it works" : "Features"}
-            </a>
-          ))}
-        </div>
-
-        {/* sign in */}
-        <div className="flex items-center" style={{ gap: 10 }}>
-          <a
-            href="/auth"
-            className="hero-nav-cta font-sans font-medium whitespace-nowrap"
-            style={{
-              fontSize: 14,
-              color: "rgba(30,28,24,0.70)",
-              border: "1px solid rgba(30,28,24,0.18)",
-              padding: "8px 18px", borderRadius: 3,
-              transition: "all 0.3s ease",
-              letterSpacing: "0.01em",
-            }}
-          >
-            Sign in
-          </a>
-        </div>
-
-        {/* hamburger button */}
-        <button
-          className="hero-hamburger flex-col justify-center items-center"
-          onClick={() => setIsMenuOpen((prev) => !prev)}
-          aria-label="Toggle navigation"
-          style={{
-            display: "none",
-            background: "none",
-            border: "none",
-            padding: 4,
-            cursor: "pointer",
-          }}
-        >
-          {isMenuOpen ? (
-            <span style={{ fontSize: 20, color: "rgba(42,39,36,0.7)", lineHeight: 1 }}>×</span>
-          ) : (
-            <div className="flex flex-col" style={{ gap: 4 }}>
-              <div style={{ width: 18, height: 1.5, background: "rgba(42,39,36,0.7)" }} />
-              <div style={{ width: 18, height: 1.5, background: "rgba(42,39,36,0.7)" }} />
-              <div style={{ width: 18, height: 1.5, background: "rgba(42,39,36,0.7)" }} />
-            </div>
-          )}
-        </button>
-
-        {/* mobile dropdown */}
-        <div
-          className={`hero-dropdown ${isMenuOpen ? "is-open" : ""}`}
-          style={{
-            position: "absolute",
-            top: 56,
-            left: 0,
-            right: 0,
-            zIndex: 49,
-            background: "rgba(246,241,231,0.97)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            borderBottom: "0.5px solid rgba(42,39,36,0.08)",
-            overflow: "hidden",
-            maxHeight: isMenuOpen ? 320 : 0,
-            opacity: isMenuOpen ? 1 : 0,
-            transition: "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease",
-          }}
-        >
-          <a
-            href="#tasks"
-            onClick={() => setIsMenuOpen(false)}
-            style={{
-              display: "block",
-              padding: "15px 20px",
-              fontSize: 14,
-              color: "rgba(42,39,36,0.65)",
-              borderBottom: "0.5px solid rgba(42,39,36,0.06)",
-            }}
-          >
-            How it works
-          </a>
-          <a
-            href="#features"
-            onClick={() => setIsMenuOpen(false)}
-            style={{
-              display: "block",
-              padding: "15px 20px",
-              fontSize: 14,
-              color: "rgba(42,39,36,0.65)",
-              borderBottom: "0.5px solid rgba(42,39,36,0.06)",
-            }}
-          >
-            Features
-          </a>
-          <a
-            href="#features"
-            onClick={() => setIsMenuOpen(false)}
-            style={{
-              display: "block",
-              padding: "15px 20px",
-              fontSize: 14,
-              color: "rgba(42,39,36,0.65)",
-              borderBottom: "0.5px solid rgba(42,39,36,0.06)",
-            }}
-          >
-            Roadmap
-          </a>
-          <a
-            href="/auth?tab=register"
-            onClick={() => setIsMenuOpen(false)}
-            style={{
-              display: "block",
-              padding: "15px 20px",
-              fontSize: 14,
-              color: "rgba(42,39,36,0.85)",
-              fontWeight: 500,
-            }}
-          >
-            Create a link
-          </a>
-        </div>
-      </nav>
+      <Navbar />
 
       <section className="hero-section relative min-h-screen overflow-hidden">
 
@@ -251,6 +59,45 @@ export default function Hero() {
           style={{ padding: "0 48px 60px", zIndex: 5, gap: 40 }}
         >
           <div className="hero-left-content" style={{ maxWidth: 620 }}>
+            {/* Early Access Badge with enhanced animations */}
+            <div style={{ marginBottom: 24 }}>
+              <div className="early-access-badge" style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                fontFamily: "monospace",
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                color: "#FFFFFF",
+                background: "linear-gradient(135deg, #C79A3E 0%, #A67C2E 50%, #C79A3E 100%)",
+                backgroundSize: "200% 100%",
+                padding: "10px 18px",
+                borderRadius: 8,
+                border: "1.5px solid rgba(255,255,255,0.3)",
+                position: "relative",
+                overflow: "hidden",
+                textTransform: "uppercase"
+              }}>
+                <span className="badge-shimmer" style={{
+                  position: "absolute",
+                  top: 0,
+                  left: "-100%",
+                  width: "100%",
+                  height: "100%",
+                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+                  zIndex: 0
+                }}></span>
+                <span className="badge-icon" style={{
+                  display: "inline-flex",
+                  fontSize: 16,
+                  position: "relative",
+                  zIndex: 1
+                }}>⚡</span>
+                <span style={{ position: "relative", zIndex: 1 }}>Early Access — Launch Pricing</span>
+              </div>
+            </div>
+
             <div className="hero-eyebrow font-mono uppercase" style={{ fontSize: 13, letterSpacing: "0.2em", color: "rgba(245,240,232,0.95)", marginBottom: 22, textShadow: "0 1px 12px rgba(12,10,8,0.7)" }}>
               Central link management
             </div>
@@ -262,9 +109,10 @@ export default function Hero() {
             <p className="hero-subtext font-sans" style={{ fontSize: 17, color: "rgba(245,240,232,0.75)", lineHeight: 1.75, maxWidth: 480, marginBottom: 36 }}>
               One permanent link for every task you care about. Update where it points, as many times as you need. Nobody ever gets a broken link again.
             </p>
+            
             <div className="hero-cta-group flex flex-wrap" style={{ gap: 14, alignItems: "center" }}>
               <a href="/auth?tab=register" className="hero-cta-primary font-sans font-semibold whitespace-nowrap" style={{ fontSize: 16, background: "#F5F0E8", color: "#1E1C18", padding: "15px 30px", borderRadius: 3 }}>
-                Create your first link
+                Start Free
               </a>
               <a href="#tasks" className="hero-cta-secondary font-sans font-medium whitespace-nowrap" style={{ fontSize: 16, border: "1px solid rgba(245,240,232,0.35)", color: "rgba(245,240,232,0.85)", padding: "15px 28px", borderRadius: 3 }}>
                 See how it works ↓
@@ -293,6 +141,62 @@ export default function Hero() {
           .hero-section {
             overflow: hidden;
             max-width: 100vw;
+          }
+
+          @keyframes badge-gradient-shift {
+            0% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+            100% {
+              background-position: 0% 50%;
+            }
+          }
+
+          @keyframes badge-shimmer {
+            0% {
+              left: -100%;
+            }
+            100% {
+              left: 200%;
+            }
+          }
+
+          @keyframes badge-icon-pulse {
+            0%, 100% {
+              transform: scale(1) rotate(0deg);
+              opacity: 1;
+            }
+            50% {
+              transform: scale(1.15) rotate(-5deg);
+              opacity: 0.85;
+            }
+          }
+
+          @keyframes badge-glow {
+            0%, 100% {
+              box-shadow: 0 4px 20px rgba(199,154,62,0.5), 
+                          0 0 40px rgba(199,154,62,0.2);
+            }
+            50% {
+              box-shadow: 0 6px 30px rgba(199,154,62,0.7), 
+                          0 0 60px rgba(199,154,62,0.35);
+            }
+          }
+
+          .early-access-badge {
+            animation: badge-glow 3s ease-in-out infinite, badge-gradient-shift 5s ease infinite;
+            box-shadow: 0 4px 20px rgba(199,154,62,0.5), 0 0 40px rgba(199,154,62,0.2);
+          }
+
+          .badge-shimmer {
+            animation: badge-shimmer 3.5s ease-in-out infinite;
+          }
+
+          .badge-icon {
+            animation: badge-icon-pulse 2s ease-in-out infinite;
           }
 
           @keyframes heroUrlFadeIn {

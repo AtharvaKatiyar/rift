@@ -25,7 +25,7 @@ export default function Footer() {
               <span className="font-serif" style={{ fontSize: 18, fontWeight: 300, color: "var(--text)", letterSpacing: "0.05em" }}>Rift</span>
             </div>
             <p className="font-sans" style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.6, marginBottom: 20, maxWidth: 280 }}>
-              The modern link shortener for developers and teams. Fast, reliable, and analytics-driven.
+              Central Link Infrastructure Platform. One permanent link for every important task. Update destinations anytime.
             </p>
             {/* Social Links */}
             <div style={{ display: "flex", gap: 12 }}>
@@ -119,8 +119,8 @@ export default function Footer() {
                 { label: "Privacy Policy", href: "/privacy" },
                 { label: "Terms of Service", href: "/terms" },
                 { label: "Cookie Policy", href: "/cookies" },
-                { label: "GDPR", href: "/gdpr" },
-                { label: "Security", href: "/security" },
+                { label: "Refund Policy", href: "/refund-policy" },
+                { label: "Contact", href: "/contact" },
               ].map((item) => (
                 <li key={item.label} style={{ marginBottom: 12 }}>
                   <Link href={item.href} className="font-sans" 
@@ -146,9 +146,17 @@ export default function Footer() {
           alignItems: "center",
           gap: 16
         }}>
-          <p className="font-sans" style={{ fontSize: 13, color: "var(--faint)", margin: 0 }}>
-            © {currentYear} Rift. All rights reserved.
-          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <p className="font-sans" style={{ fontSize: 13, color: "var(--faint)", margin: 0 }}>
+              © {currentYear} Rift. All rights reserved.
+            </p>
+            <p className="font-sans" style={{ fontSize: 12, color: "var(--faint)", margin: 0 }}>
+              Contact:{" "}
+              <a href="mailto:contact@rift.dpdns.org" style={{ color: "#8B6914", textDecoration: "none" }}>
+                contact@rift.dpdns.org
+              </a>
+            </p>
+          </div>
           <p className="font-mono" style={{ fontSize: 12, color: "var(--faint)", margin: 0 }}>
             Built with ❤️ by developers, for developers
           </p>

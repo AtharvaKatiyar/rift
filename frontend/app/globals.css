@@ -124,3 +124,15 @@ a {
   color: #5A5F55 !important;
   opacity: 1;
 }
+
+
+/* PricingNew responsive */
+@media (max-width: 768px) {
+  #pricing {
+    padding: 80px 24px !important;
+  }
+  
+  #pricing div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
