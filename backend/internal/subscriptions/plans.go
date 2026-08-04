@@ -7,38 +7,47 @@ type Plan struct {
 	Features []string
 }
 
+package subscription
+
 var Plans = map[string]Plan{
 	PlanFree: {
 		Name:  "free",
 		Price: 0,
-		Limit: 10,
+		Limit: 30,
 		Features: []string{
-			"10 active links",
+			"30 permanent links",
+			"Unlimited redirects",
+			"Basic click analytics",
+			"Community support",
 		},
 	},
 
 	PlanStarter: {
 		Name:  "starter",
 		Price: 899,
-		Limit: 50,
+		Limit: 1500,
 		Features: []string{
-			"50 active links",
-			"Basic analytics",
+			"1,500 permanent links",
+			"Unlimited redirects",
+			"Basic click analytics",
+			"Founder pricing",
+			"Early access to new features",
 		},
 	},
 
 	PlanPro: {
 		Name:  "pro",
 		Price: 1499,
-		Limit: 100,
+		Limit: 10000,
 		Features: []string{
-			"100 active links",
-			"Advanced analytics",
-			"Priority support",
+			"10,000 permanent links",
+			"Unlimited redirects",
+			"Basic click analytics",
+			"Founder pricing",
+			"Priority access to new features",
 		},
 	},
 }
-
 func GetPlan(
 	name string,
 ) Plan {

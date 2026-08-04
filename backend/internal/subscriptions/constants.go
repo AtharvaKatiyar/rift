@@ -15,9 +15,9 @@ const (
 )
 
 const (
-	FreePlanLimit    int64 = 10
-	StarterPlanLimit int64 = 50
-	ProPlanLimit     int64 = 100
+	FreePlanLimit    int64 = 30
+	StarterPlanLimit int64 = 1500
+	ProPlanLimit     int64 = 10000
 )
 
 const (

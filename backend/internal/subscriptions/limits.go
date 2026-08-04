@@ -7,12 +7,12 @@ func GetPlanLimit(
 	switch plan {
 
 	case PlanStarter:
-		return 50
+		return 1500
 
 	case PlanPro:
-		return 100
+		return 10000
 
 	default:
-		return 10
+		return 30
 	}
 }
